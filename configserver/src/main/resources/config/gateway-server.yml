@@ -1,0 +1,47 @@
+server:
+  port: 8072
+eureka:
+  instance:
+    preferIpAddress: true
+  client:
+    registerWithEureka: true
+    fetchRegistry: true
+    serviceUrl:
+      defaultZone: http://localhost:8070/eureka/
+
+spring:
+  cloud:
+    loadbalancer:
+      cache:
+        enabled: false
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: product-service
+              uri: lb://product-service
+              predicates:
+                - Path=/productservice/**
+              filters:
+                - RewritePath=/productservice/(?<path>.*), /$\{path}
+            - id: order-service
+              uri: lb://order-service
+              predicates:
+                - Path=/orderservice/**
+              filters:
+                - RewritePath=/orderservice/(?<path>.*), /$\{path}
+            - id: auth-service
+              uri: lb://auth
+              predicates:
+                - Path=/auth/**
+              filters:
+                - RewritePath=/auth/(?<path>.*), /$\{path}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    gateway:
+      access: unrestricted

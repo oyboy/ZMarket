@@ -1,0 +1,16 @@
+server:
+  port: 8070
+eureka:
+  renewalPercentThreshold: 0.85
+  instance:
+    hostname: localhost
+  client:
+    registerWithEureka: false
+    fetchRegistry: false #do not cache info
+    serviceUrl:
+      defaultZone:
+        http://${eureka.instance.hostname}:${server.port}/eureka/
+  server:
+    waitTimeInMsWhenSyncEmpty: 5 #initial waiting time before accepting requests
+    enableSelfPreservation: false  # Ключевой: отключает "emergency" mode
+    evictionIntervalTimerInMs: 10000 # Экспаит "мёртвые" инстансы каждые 10 сек (дефолт 60 сек)

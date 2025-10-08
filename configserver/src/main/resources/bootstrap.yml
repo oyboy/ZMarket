@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: config-server
+  profiles:
+    active:
+      - native
+  cloud:
+    config:
+      server:
+        bootstrap: true
+        native:
+          search-locations: classpath:/config
+        #git:
+          #uri: https://github.com/oyboy/zmarket_config.git
+server:
+  port: 8071
+
+encrypt:
+  key: oijdf0je09fj02j4gf0j20gj20fj032jf2j3g023gj
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
