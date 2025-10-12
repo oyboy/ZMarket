@@ -2,6 +2,7 @@ package com.scammers.authservice;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.http.*;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -13,6 +14,9 @@ import java.util.Map;
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
+    @Autowired
+    private Environment env;
+
     static class LoginRequest {
         @JsonProperty("username")
         public String username;
@@ -41,8 +45,8 @@ public class AuthController {
     public ResponseEntity<Map<String, Object>> login(@RequestBody LoginRequest request) {
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
         params.add("grant_type", "password");
-        params.add("client_id", "market-frontend");
-        params.add("client_secret", "xB1D8FSu9p7N6GcOUJQ7mv9gDxPUKNmV");
+        params.add("client_id", env.getProperty("spring.security.oauth2.client.registration.my-client.client-id"));
+        params.add("client_secret", env.getProperty("spring.security.oauth2.client.registration.my-client.client-secret"));
         params.add("username", request.username);
         params.add("password", request.password);
         params.add("scope", "openid profile email");

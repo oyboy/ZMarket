@@ -2,21 +2,22 @@ spring:
   application:
     name: config-server
   profiles:
-    active:
-      - native
+    active: native, vault
   cloud:
     config:
       server:
-        bootstrap: true
+        vault:
+          host: localhost
+          port: 8200
+          token: ${VAULT_TOKEN}
+          kv-version: 2
+          backend: kv
         native:
           search-locations: classpath:/config
-        #git:
-          #uri: https://github.com/oyboy/zmarket_config.git
+
+
 server:
   port: 8071
-
-encrypt:
-  key: oijdf0je09fj02j4gf0j20gj20fj032jf2j3g023gj
 
 management:
   endpoints:

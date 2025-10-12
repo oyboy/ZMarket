@@ -15,8 +15,11 @@ spring:
       cache:
         enabled: false
     gateway:
+      dicovery.locator:
+        enabled: true
+        lowerCaseServiceId: true
       server:
-        webflux:
+        webmvc:
           routes:
             - id: product-service
               uri: lb://product-service
@@ -31,11 +34,11 @@ spring:
               filters:
                 - RewritePath=/orderservice/(?<path>.*), /$\{path}
             - id: auth-service
-              uri: lb://auth
+              uri: lb://auth-service
               predicates:
-                - Path=/auth/**
+                - Path=/authservice/**
               filters:
-                - RewritePath=/auth/(?<path>.*), /$\{path}
+                - RewritePath=/authservice/(?<path>.*), /$\{path}
 
 management:
   endpoints:

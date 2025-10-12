@@ -1,4 +1,5 @@
 version: '3.8'
+
 services:
   keycloak:
     image: quay.io/keycloak/keycloak:21.1.2
@@ -8,3 +9,8 @@ services:
     command: start-dev
     ports:
       - "8085:8080"
+    volumes:
+      - keycloak_settings:/keycloak/settings
+
+volumes:
+  keycloak_settings:
