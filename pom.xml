@@ -3,10 +3,10 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<name>zmarket</name>
+	<name>Zmarket</name>
 	<description>Super project on Spring Boot</description>
 	<groupId>com.scammers</groupId>
-	<artifactId>zmarket</artifactId>
+	<artifactId>Zmarket</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 
 	<parent>
@@ -20,12 +20,14 @@
 		<java.version>21</java.version>
 	</properties>
 
+    <packaging>pom</packaging>
 	<modules>
-<!--		<module>configserver</module>
-		<module>eurekaserver</module>
-		<module>gatewayserver</module>-->
-<!--		<module>test1-service</module>
-		<module>test2-service</module>-->
+		<module>backend/configserver</module>
+		<module>backend/eurekaserver</module>
+		<module>backend/gatewayserver</module>
+		<module>backend/auth-service</module>
+		<module>backend/order-service</module>
+		<module>backend/product-service</module>
 	</modules>
 	<build>
 		<plugins>
@@ -39,5 +41,4 @@
 			</plugin>
 		</plugins>
 	</build>
-
 </project>
