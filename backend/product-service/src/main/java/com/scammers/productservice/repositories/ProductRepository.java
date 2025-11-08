@@ -3,8 +3,6 @@ package com.scammers.productservice.repositories;
 import com.scammers.productservice.components.ProductRowMapper;
 import com.scammers.productservice.models.Product;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.dao.support.DataAccessUtils;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -18,7 +16,6 @@ import java.util.UUID;
 public class ProductRepository {
     private final JdbcTemplate jdbcTemplate;
     private final ProductRowMapper  productRowMapper;
-    private static final Logger log = LoggerFactory.getLogger(ProductRepository.class);
 
     public Product save(Product product) {
         if (findByUUID(product.getProductUUID()) == null) {
@@ -38,14 +35,15 @@ public class ProductRepository {
         return findByUUID(product.getProductUUID());
     }
     public Product update(Product product) {
-        String command = "UPDATE products SET title = ?, description = ?, price = ?, stock = ?" +
+        String command = "UPDATE products SET title = ?, description = ?, price = ?, stock = ? " +
                 "WHERE product_uuid = ?";
         jdbcTemplate.update(
                 command,
                 product.getTitle(),
                 product.getDescription(),
                 product.getPrice(),
-                product.getStock()
+                product.getStock(),
+                product.getProductUUID()
         );
         return findByUUID(product.getProductUUID());
     }
@@ -61,21 +59,21 @@ public class ProductRepository {
     private String validateOrderBy(String orderBy) {
         Set<String> allowedColumns = Set.of("id", "title", "price", "rating", "stock");
 
-        String[] parts = orderBy.split(" ");
+        String[] parts = orderBy.split("\\s+", 2);
         String column = parts[0].toLowerCase();
-
         if (!allowedColumns.contains(column)) {
             return "id";
         }
 
+        String result = column;
         if (parts.length > 1) {
-            String direction = parts[1].toUpperCase();
+            String direction = parts[1].trim().toUpperCase();
             if ("ASC".equals(direction) || "DESC".equals(direction)) {
-                return column + " " + direction;
+                result = column + " " + direction;
             }
         }
 
-        return column;
+        return result;
     }
     public Long getTotalCountOfProducts() {
         String command = "SELECT COUNT(*) FROM products";
@@ -92,5 +90,10 @@ public class ProductRepository {
         String command =  "SELECT * FROM products WHERE product_uuid = ?";
         List<Product> products = jdbcTemplate.query(command, productRowMapper, uuid);
         return DataAccessUtils.singleResult(products);
+    }
+
+    public UUID getSellerUUID(UUID productUuid) {
+        String command =  "SELECT seller_id FROM products WHERE product_uuid = ?";
+        return jdbcTemplate.queryForObject(command, UUID.class, productUuid);
     }
 }

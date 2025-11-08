@@ -9,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,12 +31,7 @@ public class ProductService {
 
     @Transactional
     public Optional<Product> addProduct(ProductCreateRequest request) throws IllegalArgumentException {
-        if (request.price() < 0.0)
-            throw new IllegalArgumentException("Цена не может быть меньше 0");
-        if (request.title().isEmpty() || request.description().isEmpty())
-            throw new IllegalArgumentException("Название товара и его описание должны быть заполнены");
-        if (request.stock() < 1)
-            throw new IllegalArgumentException("В наличии должен быть хотя бы один товар");
+        validateProductParams(request);
 
         UUID sellerid = SecurityUtils.getCurrentUserUUID();
         System.out.println("Current sellerid: " + sellerid);
@@ -76,7 +70,9 @@ public class ProductService {
     }
 
     @Transactional
-    public Optional<Product> updateProduct(UUID uuid, ProductCreateRequest req) {
+    public Optional<Product> updateProduct(UUID uuid, ProductCreateRequest req) throws IllegalArgumentException {
+        validateProductParams(req);
+
         Product current = productRepository.findByUUID(uuid);
         if (current == null) throw new NotFoundException("Product not found");
 
@@ -93,5 +89,20 @@ public class ProductService {
         Product updated = productRepository.update(current);
         //kafkaTemplate.send("product.updated", new ProductEvent(updated.getProductUuid().toString(), "UPDATED"));
         return Optional.of(updated);
+    }
+
+    private void validateProductParams(ProductCreateRequest request) throws IllegalArgumentException {
+        if (request.price() < 0.0)
+            throw new IllegalArgumentException("Цена не может быть меньше 0");
+        if (request.title().isEmpty() || request.description().isEmpty())
+            throw new IllegalArgumentException("Название товара и его описание должны быть заполнены");
+        if (request.stock() < 1)
+            throw new IllegalArgumentException("В наличии должен быть хотя бы один товар");
+    }
+
+    public boolean isOwner(UUID productUuid) {
+        UUID currentUuid = SecurityUtils.getCurrentUserUUID();
+        UUID sellerUuid = productRepository.getSellerUUID(productUuid);
+        return currentUuid.equals(sellerUuid);
     }
 }
