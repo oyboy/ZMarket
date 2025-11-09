@@ -8,5 +8,3 @@ CREATE TABLE products (
     stock INT NOT NULL DEFAULT 0,
     rating NUMERIC(3,2) DEFAULT 0
 );
-CREATE INDEX idx_products_seller_id ON products(seller_id);
-CREATE INDEX idx_products_title ON products USING gin (to_tsvector('russian', title));
