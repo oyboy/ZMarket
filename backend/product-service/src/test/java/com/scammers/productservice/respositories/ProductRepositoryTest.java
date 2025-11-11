@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.jdbc.Sql;
 
 import java.util.List;
 import java.util.UUID;
@@ -23,6 +24,7 @@ import static org.assertj.core.api.Assertions.assertThat;
         "spring.sql.init.mode=always"
 })
 @ActiveProfiles("test")
+@Sql(scripts = "/h2/test-table.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_CLASS)
 class ProductRepositoryTest {
     @Autowired
     private ProductRepository productRepository;
