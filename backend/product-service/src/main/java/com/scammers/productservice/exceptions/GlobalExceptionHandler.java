@@ -5,8 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.BadSqlGrammarException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-
-import java.nio.file.AccessDeniedException;
+import org.springframework.security.access.AccessDeniedException;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
@@ -24,7 +23,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<AppError> handleAccessDeniedException(AccessDeniedException e) {
-        AppError error = new AppError(HttpStatus.FORBIDDEN.value(), "Вы не можете как либо изменять чужие товары: " + e.getMessage());
+        AppError error = new AppError(HttpStatus.FORBIDDEN.value(), e.getMessage());
         return new ResponseEntity<>(error, HttpStatus.FORBIDDEN);
     }
 

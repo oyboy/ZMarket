@@ -31,7 +31,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authz -> authz
                         .requestMatchers(HttpMethod.GET, "/api/v1/products/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/products/**").hasAnyAuthority("SELLER", "ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/v1/products/**").hasAnyAuthority("SELLER", "ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/products/**").hasAnyAuthority("SELLER", "ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/products/**").hasAnyAuthority("SELLER", "ADMIN")
                         .anyRequest().authenticated()
                 )

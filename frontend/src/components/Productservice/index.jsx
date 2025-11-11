@@ -60,15 +60,11 @@ const Marketplace = () => {
     };
 
     useEffect(() => {
-        if (token) {
-            const roles = getRolesFromToken(token);
-            setUserRoles(roles);
-            fetchProducts();
-        } else {
-            setUserRoles([]);
-            setProducts([]);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        setUserRoles(token ? getRolesFromToken(token) : []);
+    }, [token]);
+
+    useEffect(() => {
+        fetchProducts();
     }, [token]);
 
     useEffect(() => {
@@ -190,8 +186,6 @@ const Marketplace = () => {
             return;
         }
 
-        // На публичной странице "Редактировать" показываем только админу.
-        // Для продавца — отдельный кабинет /seller/products.
         if (!isAdmin() && product) {
             alert('Редактирование из каталога только для администратора. Перейдите в "Кабинет продавца".');
             return;
@@ -221,11 +215,11 @@ const Marketplace = () => {
         <div className="min-h-screen bg-gray-50">
             <Header
                 token={token}
-                canManage={isAdmin()}               // в каталоге редактировать разрешаем только админу
+                canManage={isAdmin()}
                 onLogout={handleLogout}
                 onOpenAdd={() => openProductModal()}
                 onOpenLogin={() => setShowLoginModal(true)}
-                showSellerLink={isSellerOrAdmin()} // ссылка в кабинет продавца
+                showSellerLink={isSellerOrAdmin()}
             />
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -243,8 +237,10 @@ const Marketplace = () => {
                 ) : (
                     <ProductsGrid
                         products={displayedProducts}
-                        canManage={isAdmin()} // только админ видит кнопку редактирования в каталоге
+                        canManage={isAdmin()}
                         onEdit={(p) => openProductModal(p)}
+                        showBuy={true}
+                        onRequireAuth={() => setShowLoginModal(true)}
                     />
                 )}
 

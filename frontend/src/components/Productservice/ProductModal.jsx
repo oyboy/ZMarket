@@ -1,7 +1,12 @@
 import React from 'react';
 
-const ProductModal = ({ open, isEdit, loading, formData, onChange, onSubmit, onClose }) => {
+const ProductModal = ({ open, isEdit, loading, formData, onChange, onSubmit, onClose, imageFile, onImageChange }) => {
     if (!open) return null;
+
+    const handleImageChange = (e) => {
+        const file = e.target.files?.[0] || null;
+        onImageChange && onImageChange(file);
+    };
 
     return (
         <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -67,6 +72,14 @@ const ProductModal = ({ open, isEdit, loading, formData, onChange, onSubmit, onC
                                             min="0"
                                         />
                                     </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Фото товара</label>
+                                    <input type="file" accept="image/*" onChange={handleImageChange} />
+                                    {imageFile && (
+                                        <p className="text-xs text-gray-500 mt-1">Выбрано: {imageFile.name}</p>
+                                    )}
                                 </div>
                             </div>
                         </div>

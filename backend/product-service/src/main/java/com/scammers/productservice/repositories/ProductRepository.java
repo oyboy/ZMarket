@@ -96,4 +96,9 @@ public class ProductRepository {
         String command =  "SELECT seller_id FROM products WHERE product_uuid = ?";
         return jdbcTemplate.queryForObject(command, UUID.class, productUuid);
     }
+
+    public List<Product> getProductsForSellerByUUID(UUID sellerUUID) {
+        String command = "SELECT * FROM products WHERE seller_id = ?";
+        return jdbcTemplate.query(command, productRowMapper, sellerUUID);
+    }
 }
