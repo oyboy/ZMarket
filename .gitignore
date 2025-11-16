@@ -33,3 +33,4 @@ build/
 .vscode/
 
 .github
+deploy/keys

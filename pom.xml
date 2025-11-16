@@ -28,6 +28,7 @@
 		<module>backend/auth-service</module>
 		<module>backend/order-service</module>
 		<module>backend/product-service</module>
+        <module>backend/review-aggregate-service</module>
 	</modules>
 	<build>
 		<plugins>
