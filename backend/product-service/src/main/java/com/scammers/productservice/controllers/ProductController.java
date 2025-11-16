@@ -1,23 +1,17 @@
 package com.scammers.productservice.controllers;
 
 import com.scammers.productservice.models.Product;
-import com.scammers.productservice.models.ProductCreateRequest;
-import com.scammers.productservice.services.AttachmentService;
+import com.scammers.productservice.models.requests.ProductCreateRequest;
 import com.scammers.productservice.services.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 

@@ -6,6 +6,8 @@ spring:
   cloud:
     config:
       uri: http://localhost:8071
+  flyway:
+    baseline-on-migrate: true
 
 logging:
   level:
