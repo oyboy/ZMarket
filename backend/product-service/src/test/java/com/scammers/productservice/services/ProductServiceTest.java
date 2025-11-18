@@ -2,7 +2,7 @@ package com.scammers.productservice.services;
 
 import com.scammers.productservice.configs.SecurityUtils;
 import com.scammers.productservice.models.Product;
-import com.scammers.productservice.models.ProductCreateRequest;
+import com.scammers.productservice.models.requests.ProductCreateRequest;
 import com.scammers.productservice.repositories.ProductRepository;
 import jakarta.ws.rs.NotFoundException;
 import org.junit.jupiter.api.AfterEach;
@@ -96,7 +96,6 @@ class ProductServiceTest {
                 .description("Test Description")
                 .price(99.99)
                 .stock(10L)
-                .rating(0.0)
                 .build();
 
         when(productRepository.save(any(Product.class))).thenReturn(savedProduct);
