@@ -22,6 +22,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/authservice/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/productservice/api/v1/products").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/revaggservice/api/v1/ratings/{productId}").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/productservice/api/v1/products/{productId}/reviews/rating").permitAll()
                         .requestMatchers(HttpMethod.GET, "/productservice/api/v1/products/{productId}/attachments").permitAll()
                         .requestMatchers(HttpMethod.GET, "/productservice/api/v1/products/{gridFsId}/attachments-fs").permitAll()
                         .anyRequest().authenticated()

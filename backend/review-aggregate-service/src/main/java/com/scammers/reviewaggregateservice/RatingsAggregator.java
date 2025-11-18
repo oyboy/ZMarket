@@ -35,22 +35,18 @@ public class RatingsAggregator {
 
     @Transactional
     public void onEvent(String message) throws Exception {
-        System.out.println("Accept message: " + message);
         JsonNode root = om.readTree(message);
-
-        UUID eventId = UUID.fromString(root.get("id").asText());
-
-
-        String type = root.get("type").asText();
-        UUID productId = UUID.fromString(root.get("aggregate_id").asText());
         JsonNode payload = root.get("payload");
+        if (payload != null && payload.isTextual()) payload = om.readTree(payload.asText());
+        if (payload == null) payload = root;
 
+        String type = root.path("type").asText();
+        UUID eventId = UUID.fromString(payload.get("eventId").asText());
+        UUID productId = UUID.fromString(payload.get("productId").asText());
         UUID userId = UUID.fromString(payload.get("userId").asText());
-
         PendingStatus status = PendingStatus.valueOf(payload.get("reviewPendingStatus").asText());
 
         if (processedRepo.findById(eventId) != null) {
-            //Переотправка для финализации
             sendResult(new RatingApplier(ApplyStatus.SUCCESS, status, eventId, productId, userId, null, Instant.now()));
             return;
         }

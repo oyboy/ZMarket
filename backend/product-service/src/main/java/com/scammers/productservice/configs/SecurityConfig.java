@@ -30,9 +30,15 @@ public class SecurityConfig {
                 .csrf().disable()
                 .authorizeHttpRequests(authz -> authz
                         .requestMatchers(HttpMethod.GET, "/api/v1/products/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/products/**").hasAnyAuthority("SELLER", "ADMIN")
-                        .requestMatchers(HttpMethod.PATCH, "/api/v1/products/**").hasAnyAuthority("SELLER", "ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/v1/products/**").hasAnyAuthority("SELLER", "ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/ratings/**").permitAll()
+
+                        .requestMatchers(HttpMethod.POST, "/api/v1/products/{product_uuid}/reviews").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/products/{product_uuid}/reviews/{review_id}").authenticated()
+
+                        .requestMatchers(HttpMethod.POST, "/api/v1/products/**").hasAnyAuthority("SCOPE_SELLER", "SCOPE_ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/products/**").hasAnyAuthority("SCOPE_SELLER", "SCOPE_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/products/**").hasAnyAuthority("SCOPE_SELLER", "SCOPE_ADMIN")
+
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
