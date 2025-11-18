@@ -46,7 +46,7 @@ public class ReviewService {
         Short oldRating = r.getId() == null ? null : r.getRating();
         r.setRating(rating);
         r.setComment(text);
-        r.setReviewStatus(ReviewStatus.PUBLISHED);
+        r.setReviewStatus(ReviewStatus.PENDING_PUB);
         r.setUpdatedAt(Instant.now());
 
         Review saved = repository.save(r);
@@ -57,6 +57,7 @@ public class ReviewService {
         payload.put("productId", productUUID.toString());
         payload.put("reviewId", saved.getId().toString());
         payload.put("userId", userUUID.toString());
+        payload.put("reviewPendingStatus",  ReviewStatus.PENDING_PUB.name());
         payload.put("timestamp", Instant.now().toString());
 
         if (oldRating == null) {
@@ -86,7 +87,7 @@ public class ReviewService {
         if (!r.getProductUUID().equals(productUUID)) throw new IllegalArgumentException("mismatch product uuid");
         if (!r.getUserUUID().equals(userUUID)) throw new AccessDeniedException("not owner");
 
-        r.setReviewStatus(ReviewStatus.DELETED);
+        r.setReviewStatus(ReviewStatus.PENDING_DEL);
         r.setUpdatedAt(Instant.now());
         repository.save(r);
 
@@ -96,6 +97,7 @@ public class ReviewService {
                 "reviewId", reviewUUID.toString(),
                 "userId", userUUID.toString(),
                 "rating", r.getRating(),
+                "reviewPendingStatus",  ReviewStatus.PENDING_DEL.name(),
                 "timestamp", Instant.now().toString()
         );
         try {

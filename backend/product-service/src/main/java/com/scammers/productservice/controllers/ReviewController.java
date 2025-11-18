@@ -25,7 +25,7 @@ public class ReviewController {
     ) {
         UUID userId = UUID.fromString(jwt.getSubject());
         service.saveReviewOnProduct(productUUID, userId, reviewCreateRequest);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.accepted().build();
     }
 
     @DeleteMapping("/{review_id}")
