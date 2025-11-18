@@ -6,6 +6,8 @@ import com.scammers.productservice.configs.ObjectMapperFactory;
 import com.scammers.productservice.models.RatingApplier;
 import com.scammers.productservice.models.enums.ApplyStatus;
 import com.scammers.productservice.models.enums.ReviewStatus;
+import com.scammers.productservice.models.requests.ReviewCreateRequest;
+import com.scammers.productservice.services.ReviewService;
 import com.scammers.productservice.services.ReviewsWatchdog;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.*;
@@ -16,6 +18,7 @@ import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.test.EmbeddedKafkaBroker;
 import org.springframework.kafka.test.context.EmbeddedKafka;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -29,6 +32,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertThrows;
 
 @SpringBootTest
 @EmbeddedKafka(partitions = 1, topics = {"ratings-results"})
@@ -52,6 +56,7 @@ class ProductReviewsFlowIT {
     @Autowired JdbcTemplate jdbc;
     @Autowired ReviewsWatchdog reviewsWatchdog;
     @Autowired EmbeddedKafkaBroker broker;
+    @Autowired ReviewService reviewService;
 
     KafkaTemplate<String, String> kafka;
     ObjectMapper om = ObjectMapperFactory.create();
@@ -133,6 +138,40 @@ class ProductReviewsFlowIT {
             insert into products(product_uuid, seller_id, title, description, price, stock, rating)
             values(?, ?, ?, ?, ?, ?, ?)
         """, productId, UUID.randomUUID(), "Test title", "Desc", new BigDecimal("123.45"), 10, new BigDecimal("0"));
+    }
+    private void insertProduct(UUID productId, UUID sellerId) {
+        jdbc.update("""
+        INSERT INTO products(product_uuid, seller_id, title, description, price, stock, rating)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, productId, sellerId, "Test Product", "For self-review test",
+                new BigDecimal("999.99"), 1, BigDecimal.ZERO);
+    }
+
+    @Test
+    void seller_cannot_review_own_product() {
+        UUID productId = UUID.randomUUID();
+        UUID sellerId = UUID.randomUUID();
+
+        insertProduct(productId, sellerId);
+
+        var request = new ReviewCreateRequest((short) 5, "Сам себе пятёрку поставил!");
+
+        var exception = assertThrows(AccessDeniedException.class, () -> {
+            reviewService.saveReviewOnProduct(productId, sellerId, request);
+        });
+
+        assertThat(exception.getMessage())
+                .isEqualTo("Вы не можете оценивать свой товар");
+
+        Integer count = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM product_reviews WHERE product_id = ? AND user_id = ?",
+                Integer.class, productId, sellerId);
+        assertThat(count).isZero();
+
+        Integer outboxCount = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM outbox WHERE aggregate_id = ?",
+                Integer.class, productId);
+        assertThat(outboxCount).isZero();
     }
 
     @Test

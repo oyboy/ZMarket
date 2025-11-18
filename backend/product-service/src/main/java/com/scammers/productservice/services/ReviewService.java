@@ -8,6 +8,7 @@ import com.scammers.productservice.models.requests.ReviewCreateRequest;
 import com.scammers.productservice.models.enums.EventType;
 import com.scammers.productservice.models.enums.ReviewStatus;
 import com.scammers.productservice.repositories.OutboxRepository;
+import com.scammers.productservice.repositories.ProductRepository;
 import com.scammers.productservice.repositories.ReviewRepository;
 import jakarta.ws.rs.NotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ import java.util.UUID;
 public class ReviewService {
     private final ReviewRepository repository;
     private final OutboxRepository outboxRepo;
+    private final ProductRepository productRepository;
     private final ObjectMapper om;
 
     @Transactional
@@ -32,6 +34,9 @@ public class ReviewService {
         short rating = request.mark();
         String text = request.text();
         if (rating < 1 || rating > 5) throw new IllegalArgumentException("Invalid rating");
+
+        UUID sellerUUID = productRepository.getSellerUUID(productUUID);
+        if (sellerUUID.equals(userUUID)) throw new AccessDeniedException("Вы не можете оценивать свой товар");
 
         Review r = repository.findReviewByProductAndUser(productUUID, userUUID)
                 .orElseGet(() -> {
