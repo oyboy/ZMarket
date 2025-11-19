@@ -4,10 +4,10 @@ export const PRODUCTS_API =
 
 export async function getProductRating(productUUID) {
     const res = await fetch(`${PRODUCTS_API}/products/${productUUID}/reviews/rating`, {
-        headers: { 'Accept': 'application/json' },
+        headers: { Accept: 'application/json' },
     });
     if (!res.ok) throw new Error(`Rating HTTP ${res.status}`);
-    return res.json(); // { avg, cnt, b1..b5 } или твой RatingResponse
+    return res.json();
 }
 
 export async function postReview(productUUID, { mark, text }, token) {
@@ -23,4 +23,18 @@ export async function postReview(productUUID, { mark, text }, token) {
     if (res.status === 401) throw new Error('UNAUTHORIZED');
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return { accepted: true };
+}
+
+export async function getProductReviews(productUUID, { limit = 10, offset = 0 } = {}) {
+    const url = `${PRODUCTS_API}/products/${productUUID}/reviews?limit=${limit}&offset=${offset}`;
+    const res = await fetch(url, { headers: { Accept: 'application/json' } });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (Array.isArray(data) ? data : []).map((x, i) => ({
+        id: x.id ?? `${x.userId}-${i}`,
+        userId: x.userId,
+        rating: Number(x.rating ?? 0),
+        text: x.text ?? '',
+        createdAt: x.updated_at ?? null
+    }));
 }

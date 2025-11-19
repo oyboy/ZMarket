@@ -3,6 +3,7 @@ package com.scammers.productservice.repositories;
 import com.scammers.productservice.components.ReviewRowMapper;
 import com.scammers.productservice.models.Review;
 import com.scammers.productservice.models.dtos.PendingReviewRow;
+import com.scammers.productservice.models.dtos.ShowReview;
 import com.scammers.productservice.models.enums.ReviewStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +33,24 @@ public class ReviewRepository {
         String command = "SELECT * FROM product_reviews WHERE product_id = ? AND user_id = ?";
         List<Review> products = jdbcTemplate.query(command, reviewRowMapper, productUUID, userUUID);
         return Optional.ofNullable(DataAccessUtils.singleResult(products));
+    }
+
+    public List<ShowReview> findReviewsForProduct(UUID productUUID, int limit, int offset) {
+        return jdbcTemplate.query("""
+                select user_id, comment as text, rating::smallint as rating, uploaded_at
+                from product_reviews
+                where product_id = ? and status = 'PUBLISHED'
+                order by uploaded_at desc nulls last, created_at desc
+                limit ? offset ?
+                """,
+                (rs, i) -> new ShowReview(
+                        (UUID) rs.getObject("user_id"),
+                        rs.getString("text"),
+                        rs.getShort("rating"),
+                        rs.getTimestamp("uploaded_at").toInstant()
+                ),
+                productUUID, limit, offset
+        );
     }
 
     public Review save(Review r) {

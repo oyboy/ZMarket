@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.scammers.productservice.models.OutboxEvent;
 import com.scammers.productservice.models.Review;
+import com.scammers.productservice.models.dtos.ShowReview;
 import com.scammers.productservice.models.requests.ReviewCreateRequest;
 import com.scammers.productservice.models.enums.EventType;
 import com.scammers.productservice.models.enums.ReviewStatus;
@@ -18,8 +19,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -110,5 +113,9 @@ public class ReviewService {
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public List<ShowReview> getReviewsForProduct(UUID productUUID, int limit, int offset) {
+        return repository.findReviewsForProduct(productUUID, limit, offset);
     }
 }

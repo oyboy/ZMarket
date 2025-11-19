@@ -1,5 +1,6 @@
 package com.scammers.productservice.controllers;
 
+import com.scammers.productservice.models.dtos.ShowReview;
 import com.scammers.productservice.models.requests.ReviewCreateRequest;
 import com.scammers.productservice.models.responses.RatingResponse;
 import com.scammers.productservice.services.ReviewService;
@@ -9,6 +10,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -42,5 +44,14 @@ public class ReviewController {
     public ResponseEntity<RatingResponse> getRating(@PathVariable("product_uuid") UUID productUUID) {
         RatingResponse rating = ratingClient.getRating(productUUID);
         return ResponseEntity.ok(rating);
+    }
+
+    @GetMapping
+    public ResponseEntity<List<ShowReview>> getReviews(@PathVariable("product_uuid") UUID productUUID,
+                                                       @RequestParam(defaultValue = "10") int limit,
+                                                       @RequestParam(defaultValue = "0") int offset) {
+        int safeLimit = Math.max(1, Math.min(limit, 100));
+        int safeOffset = Math.max(0, offset);
+        return ResponseEntity.ok(service.getReviewsForProduct(productUUID, safeLimit, safeOffset));
     }
 }
