@@ -35,9 +35,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/products/{product_uuid}/reviews").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/products/{product_uuid}/reviews/{review_id}").authenticated()
 
-                        .requestMatchers(HttpMethod.POST, "/api/v1/products/**").hasAnyAuthority("SCOPE_SELLER", "SCOPE_ADMIN")
-                        .requestMatchers(HttpMethod.PATCH, "/api/v1/products/**").hasAnyAuthority("SCOPE_SELLER", "SCOPE_ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/v1/products/**").hasAnyAuthority("SCOPE_SELLER", "SCOPE_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/products/**").hasAnyAuthority("SELLER", "ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/products/**").hasAnyAuthority("SELLER", "ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/products/**").hasAnyAuthority("SELLER", "ADMIN")
 
                         .anyRequest().authenticated()
                 )
