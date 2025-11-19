@@ -1,4 +1,4 @@
-CREATE TABLE products (
+CREATE TABLE IF NOT EXISTS products (
     id BIGSERIAL PRIMARY KEY,
     product_uuid UUID NOT NULL UNIQUE,
     seller_id UUID NOT NULL,

@@ -49,7 +49,6 @@ class ProductRepositoryTest {
                 .description("Test Description")
                 .price(99.99)
                 .stock(10L)
-                .rating(4.5)
                 .build();
 
         Product saved = productRepository.save(product);

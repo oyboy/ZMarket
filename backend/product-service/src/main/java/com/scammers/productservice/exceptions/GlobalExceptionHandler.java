@@ -1,5 +1,6 @@
 package com.scammers.productservice.exceptions;
 
+import feign.FeignException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.BadSqlGrammarException;
@@ -17,6 +18,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BadSqlGrammarException.class)
     public ResponseEntity<AppError> handleBadSqlGrammarException(BadSqlGrammarException e) {
+        e.printStackTrace();
         AppError error = new AppError(HttpStatus.BAD_REQUEST.value(), e.getMessage());
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
     }
@@ -32,5 +34,10 @@ public class GlobalExceptionHandler {
         e.printStackTrace();
         AppError error = new AppError(HttpStatus.INTERNAL_SERVER_ERROR.value(), e.getMessage());
         return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @ExceptionHandler(FeignException.NotFound.class)
+    public ResponseEntity<Void> handleNotFound(FeignException.NotFound ex) {
+        return ResponseEntity.notFound().build();
     }
 }

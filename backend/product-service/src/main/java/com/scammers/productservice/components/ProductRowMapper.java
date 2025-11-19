@@ -22,8 +22,7 @@ public class ProductRowMapper implements RowMapper<Product> {
                 rs.getString("title"),
                 rs.getString("description"),
                 rs.getDouble("price"),
-                rs.getLong("stock"),
-                rs.getDouble("rating")
+                rs.getLong("stock")
         );
     }
 }

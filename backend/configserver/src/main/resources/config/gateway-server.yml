@@ -39,6 +39,12 @@ spring:
                 - Path=/authservice/**
               filters:
                 - RewritePath=/authservice/(?<path>.*), /$\{path}
+            - id: review-aggregate-service
+              uri: lb://review-aggregate-service
+              predicates:
+                  - Path=/revaggservice/**
+              filters:
+                - RewritePath=/revaggservice/(?<path>.*), /$\{path}
 
 management:
   endpoints:

@@ -1,4 +1,4 @@
-package com.scammers.productservice.models;
+package com.scammers.productservice.models.requests;
 
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;

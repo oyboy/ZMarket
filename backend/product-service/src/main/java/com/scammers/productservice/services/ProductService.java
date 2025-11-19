@@ -2,7 +2,7 @@ package com.scammers.productservice.services;
 
 import com.scammers.productservice.configs.SecurityUtils;
 import com.scammers.productservice.models.Product;
-import com.scammers.productservice.models.ProductCreateRequest;
+import com.scammers.productservice.models.requests.ProductCreateRequest;
 import com.scammers.productservice.repositories.ProductRepository;
 import jakarta.ws.rs.NotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +26,6 @@ import java.util.UUID;
 public class ProductService {
     private final ProductRepository productRepository;
     private final UserClient userClient;
-//    private final KafkaTemplate<String, ProductEvent> kafkaTemplate;
 
     @Cacheable(value = "ProductService::findByUUID",key = "#uuid")
     public Optional<Product> findByUUID(UUID uuid) {
@@ -53,12 +52,10 @@ public class ProductService {
                 .description(request.description())
                 .stock(request.stock())
                 .price(request.price())
-                .rating(0.0)
                 .sellerId(sellerid)
                 .build();
 
         Product saved = productRepository.save(product);
-        //kafkaTemplate.send("product.created", new ProductEvent(saved.getProductUuid().toString(), "CREATED"));
 
         return Optional.of(saved);
     }
@@ -94,7 +91,6 @@ public class ProductService {
 
         Product updated = productRepository.update(current);
 
-        //kafkaTemplate.send("product.updated", new ProductEvent(updated.getProductUuid().toString(), "UPDATED"));
         return Optional.of(updated);
     }
 

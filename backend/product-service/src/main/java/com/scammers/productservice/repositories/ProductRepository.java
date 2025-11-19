@@ -19,8 +19,8 @@ public class ProductRepository {
 
     public Product save(Product product) {
         if (findByUUID(product.getProductUUID()) == null) {
-            String command = "INSERT INTO products (product_uuid, seller_id, title, description, price, stock, rating) " +
-                    "VALUES (?,?,?,?,?,?,?)";
+            String command = "INSERT INTO products (product_uuid, seller_id, title, description, price, stock) " +
+                    "VALUES (?,?,?,?,?,?)";
             jdbcTemplate.update(
                     command,
                     product.getProductUUID(),
@@ -28,8 +28,7 @@ public class ProductRepository {
                     product.getTitle(),
                     product.getDescription(),
                     product.getPrice(),
-                    product.getStock(),
-                    product.getRating()
+                    product.getStock()
             );
         }
         return findByUUID(product.getProductUUID());
