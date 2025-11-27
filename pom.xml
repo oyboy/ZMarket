@@ -25,10 +25,10 @@
 		<module>backend/configserver</module>
 		<module>backend/eurekaserver</module>
 		<module>backend/gatewayserver</module>
-		<module>backend/auth-service</module>
 		<module>backend/order-service</module>
 		<module>backend/product-service</module>
         <module>backend/review-aggregate-service</module>
+        <module>backend/user-service</module>
 	</modules>
 	<build>
 		<plugins>
