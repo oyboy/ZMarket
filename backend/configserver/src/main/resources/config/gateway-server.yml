@@ -15,9 +15,12 @@ spring:
       cache:
         enabled: false
     gateway:
-      dicovery.locator:
-        enabled: true
-        lowerCaseServiceId: true
+      discovery:
+        locator:
+          enabled: true
+          lowerCaseServiceId: true
+      default-filters:
+        - CacheRequestBody=false
       server:
         webmvc:
           routes:
@@ -27,24 +30,27 @@ spring:
                 - Path=/productservice/**
               filters:
                 - RewritePath=/productservice/(?<path>.*), /$\{path}
+
             - id: order-service
               uri: lb://order-service
               predicates:
                 - Path=/orderservice/**
               filters:
                 - RewritePath=/orderservice/(?<path>.*), /$\{path}
-            - id: auth-service
-              uri: lb://auth-service
-              predicates:
-                - Path=/authservice/**
-              filters:
-                - RewritePath=/authservice/(?<path>.*), /$\{path}
+
             - id: review-aggregate-service
               uri: lb://review-aggregate-service
               predicates:
                   - Path=/revaggservice/**
               filters:
                 - RewritePath=/revaggservice/(?<path>.*), /$\{path}
+
+            - id: user-service
+              uri: lb://user-service
+              predicates:
+                - Path=/userservice/**
+              filters:
+                - RewritePath=/userservice/(?<path>.*), /$\{path}
 
 management:
   endpoints:

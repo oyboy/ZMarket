@@ -20,7 +20,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/authservice/**").permitAll()
+                        .requestMatchers("/userservice/api/v1/users/register").permitAll()
                         .requestMatchers(HttpMethod.GET, "/revaggservice/api/v1/ratings/{productId}").permitAll()
                         .requestMatchers(HttpMethod.GET, "/productservice/api/v1/products/**").permitAll()
                         .anyRequest().authenticated()
