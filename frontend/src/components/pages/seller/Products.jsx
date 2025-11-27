@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import ProductsGrid from '../ProductsGrid';
-import ProductModal from '../ProductModal';
+import ProductsGrid from '../../Productservice/ProductsGrid';
+import ProductModal from '../../Productservice/ProductModal';
 import { apiFetch } from '../../../services/api';
 
 const PRODUCTS_API =
     process.env.REACT_APP_PRODUCTS_URL ||
     'http://localhost:8072/productservice/api/v1';
 
-const SellerProducts = () => {
+const Products = () => {
     const [products, setProducts] = useState([]);
     const [loading, setLoading]   = useState(false);
     const [showModal, setShowModal] = useState(false);
@@ -211,4 +211,4 @@ const SellerProducts = () => {
     );
 };
 
-export default SellerProducts;
+export default Products;

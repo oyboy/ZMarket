@@ -1,14 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import Header from './Header';
 import Filters from './Filters';
 import ProductsGrid from './ProductsGrid';
 import Pagination from './Pagination';
 import ProductModal from './ProductModal';
-import LoginModal from './LoginModal';
 import { getRolesFromToken } from '../../utils/jwt';
 import { apiFetch } from '../../services/api';
 
-const Marketplace = () => {
+const Marketplace = ({ token, onRequireAuth }) => {
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(false);
 
@@ -19,8 +17,6 @@ const Marketplace = () => {
     const [sortBy, setSortBy] = useState('id');
 
     const [showProductModal, setShowProductModal] = useState(false);
-    const [showLoginModal, setShowLoginModal] = useState(false);
-
     const [isEdit, setIsEdit] = useState(false);
     const [currentProduct, setCurrentProduct] = useState(null);
 
@@ -31,20 +27,20 @@ const Marketplace = () => {
         stock: 0,
     });
 
-    const [loginData, setLoginData] = useState({ username: '', password: '' });
-
-    const [token, setToken] = useState(localStorage.getItem('jwtToken') || null);
     const [userRoles, setUserRoles] = useState([]);
 
     const pageSize = 20;
-    const PRODUCTS_URL = process.env.REACT_APP_PRODUCTS_URL || 'http://localhost:8072/productservice/api/v1';
-    const AUTH_URL = process.env.REACT_APP_AUTH_URL || 'http://localhost:8072/authservice/auth';
+    const PRODUCTS_URL =
+        process.env.REACT_APP_PRODUCTS_URL ||
+        'http://localhost:8072/productservice/api/v1';
 
     const isAdmin = () =>
         userRoles.some((role) => role === 'ADMIN' || role === 'ROLE_ADMIN');
 
     const isSellerOrAdmin = () =>
-        userRoles.some((role) => role === 'SELLER' || role === 'ADMIN' || role === 'ROLE_SELLER' || role === 'ROLE_ADMIN');
+        userRoles.some((role) =>
+            ['SELLER', 'ROLE_SELLER', 'ADMIN', 'ROLE_ADMIN'].includes(role)
+        );
 
     const fetchProducts = async () => {
         setLoading(true);
@@ -114,46 +110,12 @@ const Marketplace = () => {
         }));
     };
 
-    const handleLoginInputChange = (e) => {
-        const { name, value } = e.target;
-        setLoginData((prev) => ({ ...prev, [name]: value }));
-    };
-
-    const handleLogin = async () => {
-        setLoading(true);
-        try {
-            const response = await fetch(`${AUTH_URL}/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(loginData),
-            });
-            if (!response.ok) {
-                throw new Error('Неверные данные для входа');
-            }
-            const data = await response.json();
-            const newToken = data.token || data.access_token;
-            if (newToken) {
-                localStorage.setItem('jwtToken', newToken);
-                setToken(newToken);
-                setShowLoginModal(false);
-                alert('Успешный вход!');
-            }
-        } catch (error) {
-            console.error('Login error:', error);
-            alert(error.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleLogout = () => {
-        localStorage.removeItem('jwtToken');
-        setToken(null);
-        setProducts([]);
-    };
-
     const handleSubmitProduct = async () => {
-        if (!token || !isSellerOrAdmin()) {
+        if (!token) {
+            onRequireAuth?.();
+            return;
+        }
+        if (!isSellerOrAdmin()) {
             alert('Нужна роль SELLER или ADMIN для добавления/обновления');
             return;
         }
@@ -164,7 +126,10 @@ const Marketplace = () => {
                 : `${PRODUCTS_URL}/products`;
             const method = isEdit ? 'PATCH' : 'POST';
 
-            const data = await apiFetch(url, { method, body: JSON.stringify(formData) });
+            const data = await apiFetch(url, {
+                method,
+                body: JSON.stringify(formData),
+            });
             if (data !== null) {
                 await fetchProducts();
                 setShowProductModal(false);
@@ -178,7 +143,7 @@ const Marketplace = () => {
 
     const openProductModal = (product = null) => {
         if (!token) {
-            alert('Нужно войти для редактирования');
+            onRequireAuth?.();
             return;
         }
         if (!isSellerOrAdmin()) {
@@ -187,7 +152,9 @@ const Marketplace = () => {
         }
 
         if (!isAdmin() && product) {
-            alert('Редактирование из каталога только для администратора. Перейдите в "Кабинет продавца".');
+            alert(
+                'Редактирование из каталога только для администратора. Перейдите в "Кабинет продавца".'
+            );
             return;
         }
 
@@ -213,15 +180,6 @@ const Marketplace = () => {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            <Header
-                token={token}
-                canManage={isAdmin()}
-                onLogout={handleLogout}
-                onOpenAdd={() => openProductModal()}
-                onOpenLogin={() => setShowLoginModal(true)}
-                showSellerLink={isSellerOrAdmin()}
-            />
-
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
                 <Filters
                     searchTerm={searchTerm}
@@ -240,7 +198,7 @@ const Marketplace = () => {
                         canManage={isAdmin()}
                         onEdit={(p) => openProductModal(p)}
                         showBuy={true}
-                        onRequireAuth={() => setShowLoginModal(true)}
+                        onRequireAuth={() => onRequireAuth?.()}
                     />
                 )}
 
@@ -254,11 +212,25 @@ const Marketplace = () => {
 
                 {!loading && displayedProducts.length === 0 && (
                     <div className="text-center py-12">
-                        <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                        <svg
+                            className="mx-auto h-12 w-12 text-gray-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                            />
                         </svg>
-                        <h3 className="mt-2 text-sm font-medium text-gray-900">Товары не найдены</h3>
-                        <p className="mt-1 text-sm text-gray-500">Попробуйте изменить параметры поиска.</p>
+                        <h3 className="mt-2 text-sm font-medium text-gray-900">
+                            Товары не найдены
+                        </h3>
+                        <p className="mt-1 text-sm text-gray-500">
+                            Попробуйте изменить параметры поиска.
+                        </p>
                     </div>
                 )}
             </div>
@@ -271,15 +243,6 @@ const Marketplace = () => {
                 onChange={handleProductInputChange}
                 onSubmit={handleSubmitProduct}
                 onClose={() => setShowProductModal(false)}
-            />
-
-            <LoginModal
-                open={showLoginModal}
-                loading={loading}
-                loginData={loginData}
-                onChange={handleLoginInputChange}
-                onLogin={handleLogin}
-                onClose={() => setShowLoginModal(false)}
             />
         </div>
     );

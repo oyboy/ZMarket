@@ -3,7 +3,6 @@ export const getRolesFromToken = (token) => {
     try {
         const payload = JSON.parse(atob(token.split('.')[1]));
         let roles = [];
-
         if (payload.realm_access && Array.isArray(payload.realm_access.roles)) {
             roles = payload.realm_access.roles;
         } else if (Array.isArray(payload.authorities)) {
@@ -13,10 +12,8 @@ export const getRolesFromToken = (token) => {
         } else if (typeof payload.scope === 'string') {
             roles = payload.scope.split(' ');
         }
-
         return roles.map((r) => String(r).toUpperCase());
-    } catch (e) {
-        console.error('Error parsing token roles:', e);
+    } catch {
         return [];
     }
 };
@@ -34,4 +31,12 @@ export const getUserFromToken = (token) => {
     } catch {
         return null;
     }
+};
+
+export const getTokenExpirationMs = (token) => {
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        if (payload.exp) return payload.exp * 1000;
+    } catch {}
+    return NaN;
 };
