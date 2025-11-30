@@ -1,0 +1,19 @@
+CREATE TABLE IF NOT EXISTS rating_projection(
+    product_uuid UUID PRIMARY KEY,
+    cnt BIGINT NOT NULL DEFAULT 0,
+    sum BIGINT NOT NULL DEFAULT 0,
+    avg NUMERIC(4,2) NOT NULL DEFAULT 0.0,
+    b1 BIGINT NOT NULL DEFAULT 0,
+    b2 BIGINT NOT NULL DEFAULT 0,
+    b3 BIGINT NOT NULL DEFAULT 0,
+    b4 BIGINT NOT NULL DEFAULT 0,
+    b5 BIGINT NOT NULL DEFAULT 0,
+    last_review_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_rating_projection_last_review ON rating_projection(last_review_at);
+
+CREATE TABLE IF NOT EXISTS processed_events (
+    event_id UUID PRIMARY KEY NOT NULL,
+    processed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_processed_events_time ON processed_events(processed_at);
