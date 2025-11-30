@@ -20,4 +20,6 @@ public interface SellerProfileRepository extends JpaRepository<SellerProfile, UU
     List<SellerProfile> findRejectedProfiles();
 
     Boolean existsByInn(String inn);
+
+    Optional<SellerProfile> findByUserId(UUID userId);
 }

@@ -17,6 +17,9 @@ import LoginModal from './components/Productservice/LoginModal';
 import RegisterModal from './components/Productservice/Auth/RegisterModal';
 import BecomeSellerModal from './components/Userservice/BecomeSellerModal';
 
+import CartPage from './components/pages/buyer/CartPage';
+
+
 import { getRolesFromToken } from './utils/jwt';
 
 import {
@@ -26,6 +29,7 @@ import {
     logout,
     scheduleAutoRefresh,
 } from './services/http';
+import {ToastProvider} from "./components/Shared/ToastProvider";
 
 export default function App() {
     const [token, setToken] = useState(localStorage.getItem('jwtToken') || null);
@@ -151,7 +155,7 @@ export default function App() {
     const openBecomeSeller = () => setShowBecomeSeller(true);
 
     return (
-        <>
+        <ToastProvider>
             <Header
                 token={token}
                 onLogout={onLogout}
@@ -170,6 +174,9 @@ export default function App() {
                     path="/product/:uuid"
                     element={<ProductDetails onRequireAuth={openLogin} />}
                 />
+
+                {/* CART */}
+                <Route path="/cart" element={<CartPage onRequireAuth={openLogin} />} />
 
                 {/* SELLER */}
                 <Route
@@ -226,6 +233,6 @@ export default function App() {
                     alert('Заявка отправлена. Ожидайте подтверждение администратора.');
                 }}
             />
-        </>
+        </ToastProvider>
     );
 }

@@ -1,10 +1,13 @@
 package com.scammers.userservice.controllers;
 
+import com.scammers.userservice.models.SellerProfile;
+import com.scammers.userservice.models.dtos.SellerInfoDto;
 import com.scammers.userservice.services.KeycloakUserService;
 import com.scammers.userservice.models.requests.CompanyRegistrationRequest;
 import com.scammers.userservice.models.requests.UserRegistrationRequest;
 import com.scammers.userservice.models.responses.ApiResponse;
 import com.scammers.userservice.models.responses.UserRegistrationResponse;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -13,10 +16,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
@@ -26,6 +26,15 @@ import java.util.UUID;
 @Validated
 public class UserController {
     private final KeycloakUserService userService;
+
+    @GetMapping("/{user-id}/seller-info")
+    public ResponseEntity<ApiResponse<SellerInfoDto>> getSellerInfo(@PathVariable("user-id") UUID sellerId) {
+        SellerProfile profile = userService.getSellerProfile(sellerId)
+                .orElseThrow(() -> new EntityNotFoundException("Профиль продавца не найден"));
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.ok(SellerInfoDto.from(profile)));
+    }
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<UserRegistrationResponse>> register(@Valid @RequestBody UserRegistrationRequest req) {

@@ -29,6 +29,7 @@
 		<module>backend/product-service</module>
         <module>backend/review-aggregate-service</module>
         <module>backend/user-service</module>
+        <module>backend/cart-service</module>
 	</modules>
 	<build>
 		<plugins>
