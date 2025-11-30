@@ -5,6 +5,8 @@ import StarInput from '../Shared/StarInput';
 import { formatPrice } from '../../utils/format';
 import { getProductById, getProductAttachments, PRODUCTS_API } from '../../services/products';
 import { getProductRating, postReview, getProductReviews } from '../../services/reviews';
+import { addToCart } from '../../services/cart';
+import { useToast } from '../Shared/ToastProvider';
 
 const Bar = ({ label, value, total }) => {
     const pct = total > 0 ? Math.round((value * 100) / total) : 0;
@@ -22,7 +24,9 @@ const Bar = ({ label, value, total }) => {
 const maskUser = (id) => (id ? `${id.substring(0, 8)}…` : 'Пользователь');
 
 const ProductDetails = ({ onRequireAuth }) => {
-    const requireAuth = (typeof onRequireAuth === 'function') ? onRequireAuth : () => alert('Нужно войти');
+    const requireAuth = (typeof onRequireAuth === 'function') ? onRequireAuth : () => {};
+    const toast = useToast();
+
     const { uuid } = useParams();
     const navigate = useNavigate();
 
@@ -156,9 +160,15 @@ const ProductDetails = ({ onRequireAuth }) => {
         return () => { alive = false; };
     }, [uuid]);
 
-    const handleBuy = () => {
+    // Добавить в корзину
+    const handleAddToCart = async () => {
         if (!token) { requireAuth(); return; }
-        // TODO: корзина/заказ
+        try {
+            await addToCart(uuid, 1);
+            toast.success('Добавлено в корзину');
+        } catch (e) {
+            toast.error(e.message || 'Не удалось добавить в корзину');
+        }
     };
 
     const submitReview = async () => {
@@ -261,7 +271,13 @@ const ProductDetails = ({ onRequireAuth }) => {
                     <div className="mt-2 text-sm text-gray-600">Продавец: {product.seller_id || product.sellerId || '—'}</div>
 
                     <div className="mt-6 flex items-center gap-3">
-                        <button onClick={() => { if (!token) requireAuth(); else {/* TODO */} }} className="px-5 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white">Купить</button>
+                        <button
+                            onClick={handleAddToCart}
+                            disabled={product.stock === 0}
+                            className="px-5 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            В корзину
+                        </button>
                         <button onClick={() => navigator.clipboard.writeText(window.location.href)} className="px-5 py-2 rounded border">Поделиться</button>
                     </div>
 

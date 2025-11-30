@@ -59,6 +59,13 @@ spring:
               filters:
                 - RewritePath=/cartservice/(?<path>.*), /$\{path}
 
+            - id: warehouse-service
+              uri: lb://warehouse-service
+              predicates:
+                - Path=/warehouseservice/**
+              filters:
+                - RewritePath=/warehouseservice/(?<path>.*), /$\{path}
+
 management:
   endpoints:
     web:

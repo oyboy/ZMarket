@@ -1,12 +1,15 @@
 package com.scammers.productservice.services;
 
 import com.scammers.productservice.configs.SecurityUtils;
+import com.scammers.productservice.controllers.WarehouseClient;
 import com.scammers.productservice.models.Product;
 import com.scammers.productservice.models.requests.ProductCreateRequest;
+import com.scammers.productservice.models.requests.StockOperationRequest;
 import com.scammers.productservice.repositories.ProductRepository;
 import jakarta.ws.rs.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
@@ -26,6 +29,7 @@ import java.util.UUID;
 public class ProductService {
     private final ProductRepository productRepository;
     private final UserClient userClient;
+    private final WarehouseClient warehouseClient;
 
     @Cacheable(value = "ProductService::findByUUID",key = "#uuid")
     public Optional<Product> findByUUID(UUID uuid) {
@@ -36,27 +40,27 @@ public class ProductService {
         return Optional.ofNullable(productRepository.getProductsForSellerByUUID(ownerUUID));
     }
 
-
     @Transactional
-    public Optional<Product> addProduct(ProductCreateRequest request) throws IllegalArgumentException {
+    public Optional<Product> addProduct(ProductCreateRequest request) {
         validateProductParams(request);
 
-        UUID sellerid = SecurityUtils.getCurrentUserUUID();
-        /*if (!userClient.exists(sellerid)) {
-            throw new IllegalArgumentException("Seller does not exist");
-        }*/
+        UUID sellerId = SecurityUtils.getCurrentUserUUID();
+        UUID productId = UUID.randomUUID();
+
+        if (request.stock() != null && request.stock() > 0) {
+            warehouseClient.addStock(new StockOperationRequest(productId, request.stock().intValue()));
+        }
 
         Product product = Product.builder()
-                .productUUID(UUID.randomUUID())
+                .productUUID(productId)
                 .title(request.title())
                 .description(request.description())
-                .stock(request.stock())
                 .price(request.price())
-                .sellerId(sellerid)
+                .sellerId(sellerId)
+                .stock(request.stock())
                 .build();
 
         Product saved = productRepository.save(product);
-
         return Optional.of(saved);
     }
 
@@ -87,7 +91,6 @@ public class ProductService {
         current.setTitle(req.title());
         current.setDescription(req.description());
         current.setPrice(req.price());
-        current.setStock(req.stock());
 
         Product updated = productRepository.update(current);
 
@@ -99,8 +102,6 @@ public class ProductService {
             throw new IllegalArgumentException("Цена не может быть меньше 0");
         if (request.title().isEmpty() || request.description().isEmpty())
             throw new IllegalArgumentException("Название товара и его описание должны быть заполнены");
-        if (request.stock() < 1)
-            throw new IllegalArgumentException("В наличии должен быть хотя бы один товар");
     }
 
     @Cacheable(value = "ProductService::isOwner", key = "#productUuid + '.' + T(com.scammers.productservice.configs.SecurityUtils).getCurrentUserUUID()")
@@ -108,5 +109,10 @@ public class ProductService {
         UUID currentUuid = SecurityUtils.getCurrentUserUUID();
         UUID sellerUuid = productRepository.getSellerUUID(productUuid);
         return currentUuid.equals(sellerUuid);
+    }
+
+    @CacheEvict(value = "ProductService::findByUUID", key = "#productId")
+    public void updateStockFromKafka(UUID productId, Long newStock) {
+        productRepository.updateStock(productId, newStock);
     }
 }
