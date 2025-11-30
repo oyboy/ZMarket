@@ -61,7 +61,9 @@ const ProductCard = ({
                          onRequireAuth,
                          onSetMainAttachment,
                          onDeleteAttachment,
-                     }) => {
+                         stockInfo,
+                         onOpenStock
+}) => {
     const requireAuth = typeof onRequireAuth === 'function' ? onRequireAuth : () => alert('Нужно войти');
 
     // --- rating из товара как базовый (fallback) ---
@@ -307,7 +309,11 @@ const ProductCard = ({
                             Редактировать
                         </button>
                     )}
-
+                    {canManage && onOpenStock && (
+                        <button onClick={() => onOpenStock(product)} className="px-4 py-2 rounded-lg text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white">
+                            Склад
+                        </button>
+                    )}
                     {showUpload && (
                         <>
                             <input id={uploadInputId} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
@@ -315,6 +321,14 @@ const ProductCard = ({
                                 Загрузить фото
                             </label>
                         </>
+                    )}
+                    {canManage && stockInfo && (
+                        <div className="mt-1 text-xs text-gray-600">
+                            На складе: <span className="font-medium">{stockInfo.available}</span>
+                            {typeof stockInfo.quantityReserved === 'number' && (
+                            <span className="ml-2 text-gray-500">резерв: {stockInfo.quantityReserved}</span>
+                            )}
+                        </div>
                     )}
                 </div>
             </div>

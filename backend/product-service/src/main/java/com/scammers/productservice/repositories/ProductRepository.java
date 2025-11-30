@@ -34,14 +34,13 @@ public class ProductRepository {
         return findByUUID(product.getProductUUID());
     }
     public Product update(Product product) {
-        String command = "UPDATE products SET title = ?, description = ?, price = ?, stock = ? " +
+        String command = "UPDATE products SET title = ?, description = ?, price = ? " +
                 "WHERE product_uuid = ?";
         jdbcTemplate.update(
                 command,
                 product.getTitle(),
                 product.getDescription(),
                 product.getPrice(),
-                product.getStock(),
                 product.getProductUUID()
         );
         return findByUUID(product.getProductUUID());
@@ -99,5 +98,10 @@ public class ProductRepository {
     public List<Product> getProductsForSellerByUUID(UUID sellerUUID) {
         String command = "SELECT * FROM products WHERE seller_id = ?";
         return jdbcTemplate.query(command, productRowMapper, sellerUUID);
+    }
+
+    public void updateStock(UUID productUuid, Long newStock) {
+        String command = "UPDATE products SET stock = ? WHERE product_uuid = ?";
+        jdbcTemplate.update(command, newStock, productUuid);
     }
 }
