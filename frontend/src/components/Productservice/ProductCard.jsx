@@ -5,6 +5,7 @@ import { getProductRating } from '../../services/reviews';
 import { addToCart } from '../../services/cart';
 import { useNavigate, Link } from 'react-router-dom';
 import { useToast } from '../Shared/ToastProvider';
+import { getRolesFromToken } from '../../utils/jwt';
 
 const PRODUCTS_API =
     process.env.REACT_APP_PRODUCTS_URL ||
@@ -71,6 +72,11 @@ const ProductCard = ({
     const [count, setCount] = useState(initialCnt);
     const [ratingLoading, setRatingLoading] = useState(false);
     const [ratingError, setRatingError] = useState('');
+
+    const token = useMemo(() => localStorage.getItem('jwtToken'), []);
+    const roles = useMemo(() => (token ? getRolesFromToken(token) : []), [token]);
+    const isUser = roles.includes('USER') || roles.includes('ROLE_USER');
+
 
     const productId = useMemo(() => product.productUUID || product.id, [product]);
     const navigate = useNavigate();
@@ -288,7 +294,7 @@ const ProductCard = ({
 
                 <div className={`flex items-center ${showBuy ? 'justify-between' : 'justify-start'}`}>
                     <span className="text-xl font-bold text-gray-900">{formatPrice(product.price)}</span>
-                    {showBuy && (
+                    {showBuy && isUser && (
                         <button onClick={handleAddToCart} className="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-blue-600 hover:bg-blue-700 text-white">
                             В корзину
                         </button>
