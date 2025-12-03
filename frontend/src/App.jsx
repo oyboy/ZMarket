@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 
@@ -13,12 +14,10 @@ import AdminRejectedSellers from './components/pages/admin/RejectedSellers';
 
 import RequireRole from './components/Productservice/Auth/RequireRole';
 import Header from './components/Productservice/Header';
+import Footer from './components/Productservice/Footer';
 import LoginModal from './components/Productservice/LoginModal';
 import RegisterModal from './components/Productservice/Auth/RegisterModal';
 import BecomeSellerModal from './components/Userservice/BecomeSellerModal';
-
-import CartPage from './components/pages/buyer/CartPage';
-
 
 import { getRolesFromToken } from './utils/jwt';
 
@@ -29,7 +28,6 @@ import {
     logout,
     scheduleAutoRefresh,
 } from './services/http';
-import {ToastProvider} from "./components/Shared/ToastProvider";
 
 export default function App() {
     const [token, setToken] = useState(localStorage.getItem('jwtToken') || null);
@@ -155,53 +153,105 @@ export default function App() {
     const openBecomeSeller = () => setShowBecomeSeller(true);
 
     return (
-        <ToastProvider>
-            <Header
-                token={token}
-                onLogout={onLogout}
-                onOpenLogin={openLogin}
-                onOpenRegister={openRegister}
-                onOpenBecomeSeller={openBecomeSeller}
-            />
+        <div className="min-h-screen flex flex-col">
+          <Header
+            token={token}
+            onLogout={onLogout}
+            onOpenLogin={openLogin}
+            onOpenRegister={openRegister}
+            onOpenBecomeSeller={openBecomeSeller}
+          />
 
+          {/* Основной контент - растягивается на всю доступную высоту */}
+          <main className="flex-1 flex flex-col">
             <Routes>
-                {/* PUBLIC */}
+              {/* PUBLIC */}
+              <Route
+                path="/"
+                element={
+                  <div className="flex-1">
+                    <Marketplace token={token} onRequireAuth={openLogin} />
+                  </div>
+                }
+              />
+              <Route
+                path="/product/:uuid"
+                element={
+                  <div className="flex-1">
+                    <ProductDetails onRequireAuth={openLogin} />
+                  </div>
+                }
+              />
+
+              {/* SELLER */}
+              <Route
+                element={
+                  <RequireRole anyOf={['SELLER', 'ROLE_SELLER', 'ADMIN', 'ROLE_ADMIN']} />
+                }
+              >
                 <Route
-                    path="/"
-                    element={<Marketplace token={token} onRequireAuth={openLogin} />}
+                  path="/seller"
+                  element={
+                    <div className="flex-1">
+                      <SellerDashboard />
+                    </div>
+                  }
                 />
                 <Route
-                    path="/product/:uuid"
-                    element={<ProductDetails onRequireAuth={openLogin} />}
+                  path="/seller/products"
+                  element={
+                    <div className="flex-1">
+                      <Products />
+                    </div>
+                  }
                 />
+              </Route>
 
-                {/* CART */}
-                <Route path="/cart" element={<CartPage onRequireAuth={openLogin} />} />
-
-                {/* SELLER */}
+              {/* ADMIN */}
+              <Route element={<RequireRole anyOf={['ADMIN', 'ROLE_ADMIN']} />}>
                 <Route
-                    element={
-                        <RequireRole anyOf={['SELLER', 'ROLE_SELLER', 'ADMIN', 'ROLE_ADMIN']} />
-                    }
-                >
-                    <Route path="/seller" element={<SellerDashboard />} />
-                    <Route path="/seller/products" element={<Products />} />
-                </Route>
-
-                {/* ADMIN */}
-                <Route element={<RequireRole anyOf={['ADMIN', 'ROLE_ADMIN']} />}>
-                    <Route path="/admin" element={<AdminDashboard />} />
-                    <Route path="/admin/pending-sellers" element={<AdminPendingSellers />} />
-                    <Route path="/admin/rejected-sellers" element={<AdminRejectedSellers />} />
-                </Route>
-
-                {/* FALLBACK */}
-                <Route
-                    path="*"
-                    element={<Marketplace token={token} onRequireAuth={openLogin} />}
+                  path="/admin"
+                  element={
+                    <div className="flex-1">
+                      <AdminDashboard />
+                    </div>
+                  }
                 />
+                <Route
+                  path="/admin/pending-sellers"
+                  element={
+                    <div className="flex-1">
+                      <AdminPendingSellers />
+                    </div>
+                  }
+                />
+                <Route
+                  path="/admin/rejected-sellers"
+                  element={
+                    <div className="flex-1">
+                      <AdminRejectedSellers />
+                    </div>
+                  }
+                />
+              </Route>
+
+              {/* FALLBACK */}
+              <Route
+                path="*"
+                element={
+                  <div className="flex-1">
+                    <Marketplace token={token} onRequireAuth={openLogin} />
+                  </div>
+                }
+              />
             </Routes>
+          </main>
 
+
+          <Footer />
+
+          {/* Модальные окна */}
+          {/* ... остальной код модальных окон ... */}
             {/* LOGIN */}
             <LoginModal
                 open={showLoginModal}
@@ -233,6 +283,10 @@ export default function App() {
                     alert('Заявка отправлена. Ожидайте подтверждение администратора.');
                 }}
             />
-        </ToastProvider>
+
+
+
+
+        </div>
     );
 }
