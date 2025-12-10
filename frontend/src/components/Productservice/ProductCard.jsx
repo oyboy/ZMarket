@@ -297,36 +297,55 @@ const ProductCard = ({
                 <div className={`flex items-center ${showBuy ? 'justify-between' : 'justify-start'}`}>
                     <span className="text-xl font-bold text-gray-900">{formatPrice(product.price)}</span>
                     {showBuy && isUser && (
-                        <button onClick={handleAddToCart} className="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-blue-600 hover:bg-blue-700 text-white">
+                        <button
+                            onClick={handleAddToCart}
+                            className="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-blue-600 hover:bg-blue-700 text-white"
+                        >
                             В корзину
                         </button>
                     )}
                 </div>
 
-                <div className="flex items-center gap-2 mt-2">
+                <div className="flex flex-wrap items-center gap-2 mt-2">
                     {canManage && (
-                        <button onClick={() => onEdit && onEdit(product)} className="px-4 py-2 rounded-lg text-sm font-medium bg-green-600 hover:bg-green-700 text-white">
+                        <button
+                            onClick={() => onEdit && onEdit(product)}
+                            className="px-3 py-1.5 rounded-lg text-sm font-medium bg-green-600 hover:bg-green-700 text-white shrink-0"
+                        >
                             Редактировать
                         </button>
                     )}
                     {canManage && onOpenStock && (
-                        <button onClick={() => onOpenStock(product)} className="px-4 py-2 rounded-lg text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white">
-                            Склад
+                        <button
+                            onClick={() => onOpenStock(product)}
+                            className="px-3 py-1.5 rounded-lg text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white shrink-0"
+                        >
+                            Изменить количество
                         </button>
                     )}
                     {showUpload && (
                         <>
-                            <input id={uploadInputId} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-                            <label htmlFor={uploadInputId} className="cursor-pointer px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-800">
+                            <input
+                                id={uploadInputId}
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={handleFileChange}
+                            />
+                            <label
+                                htmlFor={uploadInputId}
+                                className="cursor-pointer px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-800 shrink-0"
+                            >
                                 Загрузить фото
                             </label>
                         </>
                     )}
+
                     {canManage && stockInfo && (
-                        <div className="mt-1 text-xs text-gray-600">
+                        <div className="basis-full text-xs text-gray-600 pt-1">
                             На складе: <span className="font-medium">{stockInfo.available}</span>
                             {typeof stockInfo.quantityReserved === 'number' && (
-                            <span className="ml-2 text-gray-500">резерв: {stockInfo.quantityReserved}</span>
+                                <span className="ml-2 text-gray-500">резерв: {stockInfo.quantityReserved}</span>
                             )}
                         </div>
                     )}

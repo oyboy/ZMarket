@@ -22,3 +22,28 @@ export async function addStock(productId, quantity) {
     if (api?.success === false) throw new Error(api.message || 'Не удалось пополнить склад');
     return api;
 }
+
+export async function removeStock(productId, quantity) {
+    const api = await apiFetch(`${WAREHOUSE_API}/remove`, {
+        method: 'POST',
+        body: JSON.stringify({ productId, quantity }),
+    });
+    if (api?.success === false) throw new Error(api.message || 'Не удалось уменьшить остаток');
+    return api;
+}
+
+export async function setStock(productId, newQuantity) {
+    const api = await apiFetch(`${WAREHOUSE_API}/set`, {
+        method: 'POST',
+        body: JSON.stringify({ productId, quantity: newQuantity }),
+    });
+    if (api?.success === false) throw new Error(api.message || 'Не удалось установить остаток');
+    return api;
+}
+
+export async function getMovements(productId, { limit = 20, offset = 0 } = {}) {
+    const api = await apiFetch(`${WAREHOUSE_API}/${productId}/movements?limit=${limit}&offset=${offset}`);
+    if (api?.success === false) throw new Error(api.message || 'Не удалось получить движение');
+    const list = api?.data || api;
+    return Array.isArray(list) ? list : [];
+}

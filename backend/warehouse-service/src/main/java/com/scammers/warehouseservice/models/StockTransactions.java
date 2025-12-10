@@ -12,6 +12,7 @@ import java.util.UUID;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
+@Getter
 public class StockTransactions {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
