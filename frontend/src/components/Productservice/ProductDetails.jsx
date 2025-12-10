@@ -3,8 +3,9 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import StarRating from '../Shared/StarRating';
 import StarInput from '../Shared/StarInput';
 import { formatPrice } from '../../utils/format';
-import { getProductById, getProductAttachments, PRODUCTS_API } from '../../services/products';
-import { getProductRating, postReview, getProductReviews } from '../../services/reviews';
+import { getProductById, getProductAttachments, PRODUCTS_API } from '../../../src/services/products';
+import { getProductRating, postReview, getProductReviews } from '../../../src/services/reviews';
+import { getRolesFromToken } from '../../utils/jwt';
 
 const Bar = ({ label, value, total }) => {
     const pct = total > 0 ? Math.round((value * 100) / total) : 0;
@@ -48,6 +49,9 @@ const ProductDetails = ({ onRequireAuth }) => {
     const [submitMsg, setSubmitMsg] = useState('');
 
     const token = useMemo(() => localStorage.getItem('jwtToken'), []);
+    const roles = useMemo(() => (token ? getRolesFromToken(token) : []), [token]);
+    const isUser = roles.includes('USER') || roles.includes('ROLE_USER');
+
     const imageId = attachments[idx]?.gridFsId || attachments[idx]?.id || attachments[idx] || product?.mainAttachmentId;
     const imgSrc = imageId ? `${PRODUCTS_API}/products/${imageId}/attachments-fs` : null;
 
@@ -261,7 +265,9 @@ const ProductDetails = ({ onRequireAuth }) => {
                     <div className="mt-2 text-sm text-gray-600">Продавец: {product.seller_id || product.sellerId || '—'}</div>
 
                     <div className="mt-6 flex items-center gap-3">
-                        <button onClick={() => { if (!token) requireAuth(); else {/* TODO */} }} className="px-5 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white">Купить</button>
+                        {isUser && (
+                            <button onClick={() => { if (!token) requireAuth(); else {/* TODO */} }} className="px-5 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white">Купить</button>
+                        )}
                         <button onClick={() => navigator.clipboard.writeText(window.location.href)} className="px-5 py-2 rounded border">Поделиться</button>
                     </div>
 
