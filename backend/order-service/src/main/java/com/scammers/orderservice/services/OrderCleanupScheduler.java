@@ -31,7 +31,7 @@ public class OrderCleanupScheduler {
         }
 
         for (Order order : expiredOrders) {
-            orderService.cancelOrder(order.getId(), "Expired TTL");
+            orderService.cancelOrder(order.getId().toString(), "Expired TTL");
         }
     }
 }

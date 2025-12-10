@@ -17,4 +17,9 @@ public class OrderItemDto {
     private String title;
     private Integer quantity;
     private BigDecimal price;
+
+    public OrderItemDto(UUID productId, Integer quantity) {
+        this.productId = productId;
+        this.quantity = quantity;
+    }
 }
