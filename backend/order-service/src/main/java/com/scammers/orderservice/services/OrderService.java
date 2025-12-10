@@ -1,0 +1,203 @@
+package com.scammers.orderservice.services;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.scammers.orderservice.controllers.CartClient;
+import com.scammers.orderservice.controllers.WarehouseClient;
+import com.scammers.orderservice.enums.OrderStatus;
+import com.scammers.orderservice.models.Order;
+import com.scammers.orderservice.models.OrderItem;
+import com.scammers.orderservice.models.dtos.CartDto;
+import com.scammers.orderservice.models.dtos.OrderDto;
+import com.scammers.orderservice.models.dtos.OrderItemDto;
+import com.scammers.orderservice.models.kafka_events.OrderCancelledEvent;
+import com.scammers.orderservice.models.kafka_events.OrderPaidEvent;
+import com.scammers.orderservice.models.requests.StockOperationRequest;
+import com.scammers.orderservice.repositories.OrderRepository;
+import jakarta.ws.rs.BadRequestException;
+import jakarta.ws.rs.NotFoundException;
+import lombok.RequiredArgsConstructor;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.stereotype.Service;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class OrderService {
+    private final OrderRepository orderRepository;
+    private final CartClient cartClient;
+    private final WarehouseClient warehouseClient;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final ObjectMapper objectMapper;
+
+    private static final long ORDER_TTL_MINUTES = 30;
+
+    @Transactional
+    public OrderDto createOrder(UUID userId, String address) {
+        CartDto cart = cartClient.getCart();
+        if (cart.getCartItems() == null || cart.getCartItems().isEmpty()) {
+            throw new BadRequestException("Корзина пуста");
+        }
+
+        Order order = new Order();
+        order.setUserId(userId);
+        order.setStatus(OrderStatus.CREATED);
+        order.setDeliveryAddress(address);
+        order.setExpiresAt(LocalDateTime.now().plusMinutes(ORDER_TTL_MINUTES));
+        order.setTotalPrice(cart.getTotalPrice());
+
+        List<OrderItem> items = cart.getCartItems().stream()
+                .map(ci -> OrderItem.builder()
+                        .order(order)
+                        .productId(ci.getProductId())
+                        .quantity(ci.getQuantity())
+                        .price(ci.getPrice())
+                        .build())
+                .collect(Collectors.toList());
+        order.setItems(items);
+
+        log.info("Saving order: {}", order);
+        orderRepository.save(order);
+
+        try {
+            log.info("reserving items");
+            reserveItems(order.getId(), items);
+            log.info("items reserved");
+
+            order.setStatus(OrderStatus.PENDING_PAYMENT);
+            orderRepository.save(order);
+            log.info("Changed status to pending payment");
+
+            cartClient.clearCart();
+            log.info("Order {} created and reserved", order.getId());
+            return mapToDto(order);
+
+        } catch (Exception e) {
+            log.error("Failed to reserve items for order {}. Rolling back.", order.getId(), e);
+            order.setStatus(OrderStatus.CANCELLED);
+            orderRepository.save(order);
+
+            throw new BadRequestException("Не удалось зарезервировать товары. Возможно, они закончились.");
+        }
+    }
+
+    @Transactional
+    public void confirmPayment(UUID orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new NotFoundException("Order not found"));
+
+        if (order.getStatus() == OrderStatus.PAID) return;
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            log.warn("Payment for cancelled order {}", orderId);
+            return;
+        }
+
+        order.setStatus(OrderStatus.PAID);
+        orderRepository.save(order);
+
+        try {
+            OrderPaidEvent event = new OrderPaidEvent(orderId, mapItemsToDto(order.getItems()));
+            String json = objectMapper.writeValueAsString(event);
+            kafkaTemplate.send("order-paid-events", json);
+        } catch (JsonProcessingException e) {
+            log.error("Failed to serialize OrderPaidEvent for order {}", orderId, e);
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public OrderDto getOrderById(UUID orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new NotFoundException("Order not found"));
+        return mapToDto(order);
+    }
+
+    @Transactional(readOnly = true)
+    public List<OrderDto> getUserOrders(UUID userId) {
+        return orderRepository.findAllByUserId(userId).stream()
+                .map(this::mapToDto)
+                .toList();
+    }
+
+    private void reserveItems(UUID orderId, List<OrderItem> items) {
+        List<OrderItem> reservedItems = new ArrayList<>();
+
+        try {
+            for (OrderItem item : items) {
+                warehouseClient.reserve(new StockOperationRequest(
+                        item.getProductId(),
+                        item.getQuantity(),
+                        orderId
+                ));
+                reservedItems.add(item);
+            }
+        } catch (Exception e) {
+            for (OrderItem item : reservedItems) {
+                try {
+                    warehouseClient.release(new StockOperationRequest(
+                            item.getProductId(),
+                            item.getQuantity(),
+                            orderId
+                    ));
+                } catch (Exception ex) {
+                    log.error("CRITICAL: Failed to rollback reservation for item {}", item.getProductId());
+                }
+            }
+            throw e;
+        }
+    }
+
+    @Transactional
+    public void cancelOrder(UUID orderId, String reason) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new NotFoundException("Order not found"));
+
+        if (order.getStatus() == OrderStatus.CANCELLED || order.getStatus() == OrderStatus.PAID) {
+            return;
+        }
+
+        log.info("Cancelling order {}. Reason: {}", orderId, reason);
+        order.setStatus(OrderStatus.CANCELLED);
+        orderRepository.save(order);
+
+        List<OrderItemDto> itemsDto = mapItemsToDto(order.getItems());
+
+        try {
+            OrderCancelledEvent event = new OrderCancelledEvent(order.getId(), itemsDto);
+            String json = objectMapper.writeValueAsString(event);
+            kafkaTemplate.send("order-cancelled-events", json);
+        } catch (JsonProcessingException e) {
+            log.error("Failed to serialize OrderCancelledEvent for order {}", orderId, e);
+        }
+    }
+
+    private OrderDto mapToDto(Order order) {
+        return OrderDto.builder()
+                .id(order.getId())
+                .userId(order.getUserId())
+                .status(order.getStatus())
+                .totalPrice(order.getTotalPrice())
+                .deliveryAddress(order.getDeliveryAddress())
+                .createdAt(order.getCreatedAt())
+                .expiresAt(order.getExpiresAt())
+                .items(mapItemsToDto(order.getItems()))
+                .build();
+    }
+
+    private List<OrderItemDto> mapItemsToDto(List<OrderItem> items) {
+        return items.stream()
+                .map(i -> OrderItemDto.builder()
+                        .productId(i.getProductId())
+                        .quantity(i.getQuantity())
+                        .price(i.getPrice())
+                        .build())
+                .toList();
+    }
+}
