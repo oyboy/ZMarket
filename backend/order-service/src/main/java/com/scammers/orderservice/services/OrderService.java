@@ -1,7 +1,8 @@
 package com.scammers.orderservice.services;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.scammers.commonkafkaevents.OrderCancelledEvent;
+import com.scammers.commonkafkaevents.OrderItemEventDto;
+import com.scammers.commonkafkaevents.OrderPaidEvent;
 import com.scammers.orderservice.controllers.CartClient;
 import com.scammers.orderservice.controllers.WarehouseClient;
 import com.scammers.orderservice.enums.OrderStatus;
@@ -10,8 +11,6 @@ import com.scammers.orderservice.models.OrderItem;
 import com.scammers.orderservice.models.dtos.CartDto;
 import com.scammers.orderservice.models.dtos.OrderDto;
 import com.scammers.orderservice.models.dtos.OrderItemDto;
-import com.scammers.orderservice.models.kafka_events.OrderCancelledEvent;
-import com.scammers.orderservice.models.kafka_events.OrderPaidEvent;
 import com.scammers.orderservice.models.requests.StockOperationRequest;
 import com.scammers.orderservice.repositories.OrderRepository;
 import jakarta.ws.rs.BadRequestException;
@@ -36,7 +35,6 @@ public class OrderService {
     private final CartClient cartClient;
     private final WarehouseClient warehouseClient;
     private final KafkaTemplate<String, Object> kafkaTemplate;
-    private final ObjectMapper objectMapper;
 
     private static final long ORDER_TTL_MINUTES = 30;
 
@@ -90,8 +88,8 @@ public class OrderService {
     }
 
     @Transactional
-    public void confirmPayment(UUID orderId) {
-        Order order = orderRepository.findById(orderId)
+    public void confirmPayment(String orderId) {
+        Order order = orderRepository.findById(UUID.fromString(orderId))
                 .orElseThrow(() -> new NotFoundException("Order not found"));
 
         if (order.getStatus() == OrderStatus.PAID) return;
@@ -103,13 +101,8 @@ public class OrderService {
         order.setStatus(OrderStatus.PAID);
         orderRepository.save(order);
 
-        try {
-            OrderPaidEvent event = new OrderPaidEvent(orderId, mapItemsToDto(order.getItems()));
-            String json = objectMapper.writeValueAsString(event);
-            kafkaTemplate.send("order-paid-events", json);
-        } catch (JsonProcessingException e) {
-            log.error("Failed to serialize OrderPaidEvent for order {}", orderId, e);
-        }
+        OrderPaidEvent event = new OrderPaidEvent(orderId, mapToEventItems(order.getItems()));
+        kafkaTemplate.send("order-paid-events", event);
     }
 
     @Transactional(readOnly = true)
@@ -155,8 +148,8 @@ public class OrderService {
     }
 
     @Transactional
-    public void cancelOrder(UUID orderId, String reason) {
-        Order order = orderRepository.findById(orderId)
+    public void cancelOrder(String orderId, String reason) {
+        Order order = orderRepository.findById(UUID.fromString(orderId))
                 .orElseThrow(() -> new NotFoundException("Order not found"));
 
         if (order.getStatus() == OrderStatus.CANCELLED || order.getStatus() == OrderStatus.PAID) {
@@ -167,15 +160,8 @@ public class OrderService {
         order.setStatus(OrderStatus.CANCELLED);
         orderRepository.save(order);
 
-        List<OrderItemDto> itemsDto = mapItemsToDto(order.getItems());
-
-        try {
-            OrderCancelledEvent event = new OrderCancelledEvent(order.getId(), itemsDto);
-            String json = objectMapper.writeValueAsString(event);
-            kafkaTemplate.send("order-cancelled-events", json);
-        } catch (JsonProcessingException e) {
-            log.error("Failed to serialize OrderCancelledEvent for order {}", orderId, e);
-        }
+        OrderCancelledEvent event = new OrderCancelledEvent(order.getId().toString(), mapToEventItems(order.getItems()));
+        kafkaTemplate.send("order-cancelled-events", event);
     }
 
     private OrderDto mapToDto(Order order) {
@@ -198,6 +184,14 @@ public class OrderService {
                         .quantity(i.getQuantity())
                         .price(i.getPrice())
                         .build())
+                .toList();
+    }
+    private List<OrderItemEventDto> mapToEventItems(List<OrderItem> items) {
+        return items.stream()
+                .map(i -> new OrderItemEventDto(
+                        i.getProductId().toString(),
+                        i.getQuantity()
+                ))
                 .toList();
     }
 }

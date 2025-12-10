@@ -14,18 +14,14 @@
     <name>test2-service</name>
     <description>test2-service</description>
     <url/>
-    <licenses>
-        <license/>
-    </licenses>
-    <developers>
-        <developer/>
-    </developers>
-    <scm>
-        <connection/>
-        <developerConnection/>
-        <tag/>
-        <url/>
-    </scm>
+
+    <repositories>
+        <repository>
+            <id>confluent</id>
+            <url>https://packages.confluent.io/maven/</url>
+        </repository>
+    </repositories>
+
     <properties>
         <java.version>21</java.version>
         <spring-cloud.version>2025.0.0</spring-cloud.version>
@@ -96,6 +92,16 @@
         <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>kafka-streams</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.confluent</groupId>
+            <artifactId>kafka-avro-serializer</artifactId>
+            <version>8.1.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.scammers</groupId>
+            <artifactId>common-kafka-events</artifactId>
+            <version>1.0.0-SNAPSHOT</version>
         </dependency>
 
         <!--Cache-->
