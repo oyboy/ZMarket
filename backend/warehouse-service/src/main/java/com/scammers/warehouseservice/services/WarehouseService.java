@@ -3,12 +3,16 @@ package com.scammers.warehouseservice.services;
 import com.scammers.commonkafkaevents.StockChangedEvent;
 import com.scammers.warehouseservice.models.StockTransactions;
 import com.scammers.warehouseservice.models.WarehouseItem;
+import com.scammers.warehouseservice.models.dtos.MovementDto;
 import com.scammers.warehouseservice.models.dtos.OrderItemDto;
 import com.scammers.warehouseservice.models.enums.TransactionType;
 import com.scammers.warehouseservice.repositories.StockTransactionRepository;
 import com.scammers.warehouseservice.repositories.WarehouseRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -65,6 +69,60 @@ public class WarehouseService {
         saveTransaction(productId, quantity, TransactionType.INBOUND, null, "Поставка товара");
         log.info("Added {} items for product {}", quantity, productId);
         sendStockEvent(productId);
+    }
+    @Transactional
+    public void removeStock(UUID productId, int quantity) {
+        if (quantity <= 0) throw new IllegalArgumentException("Quantity must be > 0");
+
+        WarehouseItem item = repository.findByProductId(productId)
+                .orElseThrow(() -> new IllegalArgumentException("Product not found"));
+
+        if (item.getQuantityOnHand() < quantity) {
+            throw new IllegalArgumentException("Not enough stock to remove");
+        }
+
+        item.setQuantityOnHand(item.getQuantityOnHand() - quantity);
+        repository.save(item);
+
+        saveTransaction(productId, quantity, TransactionType.OUTBOUND, null, "Списание продавцом");
+        sendStockEvent(productId);
+    }
+
+    @Transactional
+    public void setStock(UUID productId, int quantity) {
+        if (quantity < 0) throw new IllegalArgumentException("Quantity cannot be negative");
+
+        WarehouseItem item = repository.findByProductId(productId)
+                .orElseGet(() -> WarehouseItem.builder()
+                        .productId(productId)
+                        .quantityOnHand(0)
+                        .quantityReserved(0)
+                        .build());
+
+        int diff = quantity - item.getQuantityOnHand();
+        item.setQuantityOnHand(quantity);
+        repository.save(item);
+
+        saveTransaction(productId, Math.abs(diff), TransactionType.ADJUSTMENT, null, "Корректировка остатка");
+        sendStockEvent(productId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<MovementDto> getMovements(UUID productId, int limit, int offset) {
+        int pageNumber = limit > 0 ? offset / limit : 0;
+        Pageable pageable = PageRequest.of(pageNumber, limit, Sort.by("createdAt").descending());
+
+        return transactionRepository.findAllByProductId(productId, pageable)
+                .stream()
+                .map(tx -> MovementDto.builder()
+                        .id(tx.getId())
+                        .createdAt(tx.getCreatedAt())
+                        .type(tx.getTransactionType())
+                        .quantity(tx.getQuantity())
+                        .note(tx.getNote())
+                        .orderId(tx.getOrderId())
+                        .build())
+                .toList();
     }
 
     @Transactional

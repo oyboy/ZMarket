@@ -7,7 +7,7 @@ export default function SellerDashboard() {
             <h1 className="text-2xl font-bold mb-4">Кабинет продавца</h1>
             <div className="space-y-3">
                 <Link to="/seller/products" className="text-blue-600 hover:underline">Мои товары</Link>
-                {/* позже: статистика, логистика, заказы */}
+                <Link to="/seller/warehouse" className="text-blue-600 hover:underline">Движение по складу</Link>
             </div>
         </div>
     );
