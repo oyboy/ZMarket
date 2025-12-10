@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.scammers.warehouseservice.models.StockTransactions;
 import com.scammers.warehouseservice.models.WarehouseItem;
+import com.scammers.warehouseservice.models.dtos.OrderItemDto;
 import com.scammers.warehouseservice.models.enums.TransactionType;
 import com.scammers.warehouseservice.models.requests.StockChangedEvent;
 import com.scammers.warehouseservice.repositories.StockTransactionRepository;
@@ -15,7 +16,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -42,6 +44,22 @@ public class WarehouseService {
                 log.error("Ошибка сериализации JSON: {}", e.getMessage());
             }
         });
+    }
+    private void sendStockEventsBatch(Set<UUID> productIds) {
+        if (productIds.isEmpty()) return;
+        List<WarehouseItem> items = repository.findAllByProductIdIn(productIds);
+
+        for (WarehouseItem item : items) {
+            long available = item.getQuantityOnHand() - item.getQuantityReserved();
+            StockChangedEvent event = new StockChangedEvent(item.getProductId(), available);
+
+            try {
+                String jsonMessage = objectMapper.writeValueAsString(event);
+                kafkaTemplate.send(TOPIC_STOCK, item.getProductId().toString(), jsonMessage);
+            } catch (JsonProcessingException e) {
+                log.error("Ошибка сериализации JSON: {}", e.getMessage());
+            }
+        }
     }
 
     @Transactional
@@ -94,6 +112,40 @@ public class WarehouseService {
         sendStockEvent(productId);
     }
 
+    @Transactional
+    public void commitStockBatch(List<OrderItemDto> items, UUID orderId) {
+        Map<UUID, Integer> batch = items.stream()
+                .collect(Collectors.toMap(
+                        OrderItemDto::getProductId,
+                        OrderItemDto::getQuantity,
+                        Integer::sum
+                ));
+
+        UUID[] ids = batch.keySet().toArray(new UUID[0]);
+        Integer[] qty = batch.values().toArray(new Integer[0]);
+
+        repository.commitStockBatch(ids, qty);
+        saveTransactions(items, TransactionType.COMMIT, orderId, "Заказ оплачен");
+        sendStockEventsBatch(batch.keySet());
+    }
+
+    @Transactional
+    public void releaseStockBatch(List<OrderItemDto> items, UUID orderId) {
+        Map<UUID, Integer> batch = items.stream()
+                .collect(Collectors.toMap(
+                        OrderItemDto::getProductId,
+                        OrderItemDto::getQuantity,
+                        Integer::sum
+                ));
+
+        UUID[] ids = batch.keySet().toArray(new UUID[0]);
+        Integer[] qty = batch.values().toArray(new Integer[0]);
+
+        repository.releaseStockBatch(ids, qty);
+        saveTransactions(items, TransactionType.RELEASE, orderId, "Отмена резерва");
+        sendStockEventsBatch(batch.keySet());
+    }
+
     @Transactional(readOnly = true)
     public Integer getAvailableQuantity(UUID productId) {
         return repository.findByProductId(productId)
@@ -111,5 +163,26 @@ public class WarehouseService {
                 .createdAt(Instant.now())
                 .build();
         transactionRepository.save(transaction);
+    }
+
+    private void saveTransactions(
+            List<OrderItemDto> items,
+            TransactionType type,
+            UUID orderId,
+            String note
+    ) {
+        List<StockTransactions> tx = items.stream()
+                .map(i -> StockTransactions.builder()
+                        .productId(i.getProductId())
+                        .quantity(i.getQuantity())
+                        .transactionType(type)
+                        .orderId(orderId)
+                        .note(note)
+                        .createdAt(Instant.now())
+                        .build()
+                )
+                .toList();
+
+        transactionRepository.saveAll(tx);
     }
 }
