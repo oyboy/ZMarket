@@ -1,6 +1,8 @@
 package com.scammers.userservice.controllers;
 
+import com.scammers.userservice.models.BuyerProfile;
 import com.scammers.userservice.models.SellerProfile;
+import com.scammers.userservice.models.dtos.BuyerContactInfoDto;
 import com.scammers.userservice.models.dtos.SellerInfoDto;
 import com.scammers.userservice.services.KeycloakUserService;
 import com.scammers.userservice.models.requests.CompanyRegistrationRequest;
@@ -34,6 +36,15 @@ public class UserController {
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.ok(SellerInfoDto.from(profile)));
+    }
+
+    @GetMapping("/{userId}/contact-info")
+    public ResponseEntity<ApiResponse<BuyerContactInfoDto>> getUserContactInfo(@PathVariable("userId") UUID userId) {
+        BuyerProfile profile = userService.getBuyerProfile(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Профиль покупателя не найден"));
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.ok(BuyerContactInfoDto.from(profile)));
     }
 
     @PostMapping("/register")

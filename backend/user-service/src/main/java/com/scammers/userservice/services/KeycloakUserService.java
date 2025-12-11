@@ -36,6 +36,7 @@ public class KeycloakUserService {
     private final Keycloak keycloak;
     private final UserRepository userRepository;
     private final SellerProfileRepository sellerProfileRepository;
+    private final BuyerProfileRepository buyerProfileRepository;
 
     private static final String USER_ROLE = "USER";
 
@@ -144,5 +145,9 @@ public class KeycloakUserService {
 
     public Optional<SellerProfile> getSellerProfile(UUID userId) {
         return sellerProfileRepository.findByUserId((userId));
+    }
+
+    public Optional<BuyerProfile> getBuyerProfile(UUID userId) {
+        return buyerProfileRepository.findByUserId(userId);
     }
 }

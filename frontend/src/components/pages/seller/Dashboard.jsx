@@ -8,6 +8,7 @@ export default function SellerDashboard() {
             <div className="space-y-3">
                 <Link to="/seller/products" className="text-blue-600 hover:underline">Мои товары</Link>
                 <Link to="/seller/warehouse" className="text-blue-600 hover:underline">Движение по складу</Link>
+                <Link to="/seller/orders" className="text-blue-600 hover:underline">Заказы по моим товарам</Link>
             </div>
         </div>
     );

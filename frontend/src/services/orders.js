@@ -21,3 +21,8 @@ export async function createOrder({ deliveryAddress }) {
     });
     return api?.data || api || null;
 }
+
+export async function getSellerOrders() {
+    const api = await apiFetch(`${ORDERS_API}/seller`);
+    return api?.data || api || [];
+}

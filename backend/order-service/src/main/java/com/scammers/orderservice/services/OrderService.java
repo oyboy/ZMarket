@@ -4,14 +4,18 @@ import com.scammers.commonkafkaevents.OrderCancelledEvent;
 import com.scammers.commonkafkaevents.OrderItemEventDto;
 import com.scammers.commonkafkaevents.OrderPaidEvent;
 import com.scammers.orderservice.controllers.CartClient;
+import com.scammers.orderservice.controllers.UserClient;
 import com.scammers.orderservice.controllers.WarehouseClient;
 import com.scammers.orderservice.enums.OrderStatus;
+import com.scammers.orderservice.models.CustomerDetails;
 import com.scammers.orderservice.models.Order;
 import com.scammers.orderservice.models.OrderItem;
+import com.scammers.orderservice.models.SellerOrderView;
 import com.scammers.orderservice.models.dtos.CartDto;
 import com.scammers.orderservice.models.dtos.OrderDto;
 import com.scammers.orderservice.models.dtos.OrderItemDto;
 import com.scammers.orderservice.models.requests.StockOperationRequest;
+import com.scammers.orderservice.repositories.OrderItemRepository;
 import com.scammers.orderservice.repositories.OrderRepository;
 import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.NotFoundException;
@@ -21,6 +25,7 @@ import org.springframework.stereotype.Service;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,7 +37,9 @@ import java.util.stream.Collectors;
 @Slf4j
 public class OrderService {
     private final OrderRepository orderRepository;
+    private final OrderItemRepository orderItemRepository;
     private final CartClient cartClient;
+    private final UserClient userClient;
     private final WarehouseClient warehouseClient;
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
@@ -45,8 +52,12 @@ public class OrderService {
             throw new BadRequestException("Корзина пуста");
         }
 
+        CustomerDetails userInfo = userClient.getUserContactInfo(userId).data();
+        log.info("User info: {}", userInfo);
+
         Order order = new Order();
         order.setUserId(userId);
+        order.setCustomerDetails(userInfo);
         order.setStatus(OrderStatus.CREATED);
         order.setDeliveryAddress(address);
         order.setExpiresAt(LocalDateTime.now().plusMinutes(ORDER_TTL_MINUTES));
@@ -56,9 +67,10 @@ public class OrderService {
                 .map(ci -> OrderItem.builder()
                         .order(order)
                         .productId(ci.getProductId())
+                        .sellerId(ci.getSellerId())
                         .quantity(ci.getQuantity())
                         .price(ci.getPrice())
-                        .title(ci.getTitle())
+                        .productTitle(ci.getTitle())
                         .build())
                 .collect(Collectors.toList());
         order.setItems(items);
@@ -165,6 +177,38 @@ public class OrderService {
         kafkaTemplate.send("order-cancelled-events", event);
     }
 
+    @Transactional(readOnly = true)
+    public List<SellerOrderView> getOrdersForSeller(UUID sellerId) {
+        List<OrderItem> items = orderItemRepository.findAllBySellerId(sellerId);
+
+        return items.stream()
+                .map(item -> {
+                    Order order = item.getOrder();
+                    var customer = order.getCustomerDetails();
+
+                    return SellerOrderView.builder()
+                            // Данные заказа
+                            .orderId(order.getId())
+                            .createdAt(order.getCreatedAt())
+                            .status(order.getStatus())
+                            .deliveryAddress(order.getDeliveryAddress())
+
+                            // Данные покупателя
+                            .customerName(customer.getFullName())
+                            .customerPhone(customer.getPhone())
+                            .customerEmail(customer.getEmail())
+
+                            // Данные товара
+                            .productId(item.getProductId())
+                            .productTitle(item.getProductTitle())
+                            .quantity(item.getQuantity())
+                            .price(item.getPrice())
+                            .totalItemPrice(item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
+                            .build();
+                })
+                .toList();
+    }
+
     private OrderDto mapToDto(Order order) {
         return OrderDto.builder()
                 .id(order.getId())
@@ -184,7 +228,7 @@ public class OrderService {
                         .productId(i.getProductId())
                         .quantity(i.getQuantity())
                         .price(i.getPrice())
-                        .title(i.getTitle())
+                        .title(i.getProductTitle())
                         .build())
                 .toList();
     }
