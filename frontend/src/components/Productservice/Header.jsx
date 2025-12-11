@@ -23,6 +23,7 @@ export default function Header({
                     {isSeller && <Link to="/seller" className="text-gray-700 hover:text-gray-900">Кабинет продавца</Link>}
                     {isAdmin && <Link to="/admin" className="text-gray-700 hover:text-gray-900">Админка</Link>}
                     {isBuyer && <Link to="/cart" className="text-gray-700 hover:text-gray-900">Корзина</Link>}
+                    {isBuyer && <Link to="/orders" className="text-gray-700 hover:text-gray-900">Мои заказы</Link>}
                 </div>
 
                 <div className="flex items-center gap-3">
