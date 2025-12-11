@@ -48,11 +48,21 @@ export default function WarehouseMovements() {
     const [mvHasMore, setMvHasMore] = useState(true);
     const [mvLoading, setMvLoading] = useState(false);
 
-    const [typeFilter, setTypeFilter] = useState('ALL'); // ALL | INBOUND | RESERVE | COMMIT | RELEASE
+    const [typeFilter, setTypeFilter] = useState('ALL');
+    const [sortOrder, setSortOrder] = useState('desc');
+
     const filteredMoves = useMemo(
         () => typeFilter === 'ALL' ? moves : moves.filter(x => (x.transactionType || '').toUpperCase() === typeFilter),
         [moves, typeFilter]
     );
+
+    const ts = (x) => x?.createdAt ? new Date(x.createdAt).getTime() : 0;
+
+    const sortedMoves = useMemo(() => {
+        const arr = [...filteredMoves];
+        arr.sort((a, b) => sortOrder === 'desc' ? ts(b) - ts(a) : ts(a) - ts(b));
+        return arr;
+    }, [filteredMoves, sortOrder]);
 
     const loadProducts = async () => {
         setLoadingProducts(true);
@@ -106,7 +116,7 @@ export default function WarehouseMovements() {
         }
     };
 
-    useEffect(() => { loadProducts(); /* eslint-disable-next-line */ }, []);
+    useEffect(() => { loadProducts(); /* eslint-disable-line */ }, []);
     useEffect(() => {
         if (!selectedId) return;
         loadStock(selectedId);
@@ -118,7 +128,6 @@ export default function WarehouseMovements() {
         <div className="max-w-7xl mx-auto p-6">
             <h1 className="text-2xl font-bold mb-4">Движение по складу</h1>
 
-            {/* Выбор товара */}
             <div className="mb-4 flex flex-wrap gap-3 items-end">
                 <div>
                     <label className="block text-sm text-gray-600 mb-1">Товар</label>
@@ -136,14 +145,12 @@ export default function WarehouseMovements() {
                     </select>
                 </div>
 
-                {/* Статус склада */}
                 <div className="text-sm text-gray-700">
                     {stockLoading ? (
                         <div className="text-gray-500">Статус склада загружается…</div>
                     ) : stock ? (
                         <div className="flex gap-4">
                             <div>Доступно: <span className="font-medium">{stock.available}</span></div>
-                            <div>На полке: <span className="font-medium">{stock.quantityOnHand}</span></div>
                             <div>Резерв: <span className="font-medium">{stock.quantityReserved}</span></div>
                         </div>
                     ) : (
@@ -152,7 +159,6 @@ export default function WarehouseMovements() {
                 </div>
             </div>
 
-            {/* Фильтр по типу */}
             <div className="mb-3 flex gap-2">
                 {['ALL', 'INBOUND', 'OUTBOUND', 'RESERVE', 'COMMIT', 'RELEASE', 'ADJUSTMENT'].map(t => (
                     <button
@@ -173,14 +179,23 @@ export default function WarehouseMovements() {
                         }[t])}
                     </button>
                 ))}
+                <div className="ml-auto">
+                    <select
+                        value={sortOrder}
+                        onChange={(e) => setSortOrder(e.target.value)}
+                        className="border rounded px-2 py-1 text-sm"
+                    >
+                        <option value="desc">Сначала новые</option>
+                        <option value="asc">Сначала старые</option>
+                    </select>
+                </div>
             </div>
 
-            {/* Лента движения */}
             <div className="divide-y border rounded-lg">
-                {filteredMoves.length === 0 && !mvLoading && (
+                {sortedMoves.length === 0 && !mvLoading && (
                     <div className="p-4 text-sm text-gray-500">Записей пока нет</div>
                 )}
-                {filteredMoves.map(m => (
+                {sortedMoves.map(m => (
                     <div key={m.id || `${m.createdAt}-${m.transactionType}-${m.orderId || ''}`} className="p-3 text-sm flex items-start gap-3">
             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${typeBadge((m.transactionType || '').toUpperCase())}`}>
               {m.transactionType}
