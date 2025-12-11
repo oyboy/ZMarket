@@ -5,6 +5,7 @@ import com.scammers.orderservice.models.dtos.OrderDto;
 import com.scammers.orderservice.models.dtos.OrderItemDto;
 import jakarta.persistence.*;
 import lombok.*;
+import org.checkerframework.checker.nonempty.qual.NonEmpty;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
@@ -36,6 +37,7 @@ public class Order {
 
     private BigDecimal totalPrice;
 
+    @NonEmpty
     private String deliveryAddress;
 
     @CreationTimestamp
@@ -45,4 +47,7 @@ public class Order {
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> items;
+
+    @Embedded
+    private CustomerDetails customerDetails;
 }

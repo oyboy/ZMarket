@@ -10,6 +10,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class CartItemDto {
     private UUID productId;
+    private UUID sellerId;
     private String title;
     private BigDecimal price;
     private Integer quantity;

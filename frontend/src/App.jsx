@@ -25,6 +25,7 @@ import WarehouseMovements from './components/pages/seller/WarehouseMovements';
 
 import OrdersPage from './components/pages/buyer/OrdersPage';
 import OrderDetails from './components/pages/buyer/OrderDetails';
+import SellerOrders from './components/pages/seller/SellerOrders';
 
 import {
     TOKEN_URL,
@@ -195,6 +196,7 @@ export default function App() {
                     <Route path="/seller" element={<SellerDashboard />} />
                     <Route path="/seller/products" element={<Products />} />
                     <Route path="/seller/warehouse" element={<WarehouseMovements />} /> {}
+                    <Route path="/seller/orders" element={<SellerOrders />} />
                 </Route>
 
                 {/* ADMIN */}
