@@ -23,6 +23,9 @@ import { getRolesFromToken } from './utils/jwt';
 
 import WarehouseMovements from './components/pages/seller/WarehouseMovements';
 
+import OrdersPage from './components/pages/buyer/OrdersPage';
+import OrderDetails from './components/pages/buyer/OrderDetails';
+
 import {
     TOKEN_URL,
     CLIENT_ID,
@@ -178,6 +181,10 @@ export default function App() {
 
                 {/* CART */}
                 <Route path="/cart" element={<CartPage onRequireAuth={openLogin} />} />
+
+                {/*Orders*/}
+                <Route path="/orders" element={<OrdersPage onRequireAuth={openLogin} />} />
+                <Route path="/orders/:orderId" element={<OrderDetails />} />
 
                 {/* SELLER */}
                 <Route

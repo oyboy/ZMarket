@@ -23,6 +23,7 @@ public class OrderItem {
     private Order order;
 
     private UUID productId;
+    private String title;
     private Integer quantity;
     private BigDecimal price;
 }

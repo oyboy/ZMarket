@@ -58,6 +58,7 @@ public class OrderService {
                         .productId(ci.getProductId())
                         .quantity(ci.getQuantity())
                         .price(ci.getPrice())
+                        .title(ci.getTitle())
                         .build())
                 .collect(Collectors.toList());
         order.setItems(items);
@@ -183,6 +184,7 @@ public class OrderService {
                         .productId(i.getProductId())
                         .quantity(i.getQuantity())
                         .price(i.getPrice())
+                        .title(i.getTitle())
                         .build())
                 .toList();
     }
