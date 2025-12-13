@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import ProductsGrid from '../../Productservice/ProductsGrid';
 import ProductModal from '../../Productservice/ProductModal';
 import { apiFetch } from '../../../services/api';
-import { getStockInfo, addStock } from '../../../services/warehouse';
+import { getStockInfo, addStock, removeStock, setStock } from '../../../services/warehouse';
 import { useToast } from '../../Shared/ToastProvider';
 
 const PRODUCTS_API =
@@ -32,7 +32,6 @@ const Products = () => {
             const data = await apiFetch(`${PRODUCTS_API}/products/mine`);
             const list = Array.isArray(data) ? data : [];
             setProducts(list);
-            // подтянем остатки
             await loadStocks(list);
         } catch (e) {
             console.error(e);
@@ -163,7 +162,7 @@ const Products = () => {
         }
     };
 
-    // Колбэки для карточек
+    // карточка: загрузка/установка/удаление фото
     const handleUploadFromCard = async (product, file) => {
         try {
             const id = await uploadImage(product.productUUID || product.id, file);
@@ -194,36 +193,69 @@ const Products = () => {
         }
     };
 
-    // Склад — модалка
     const [stockModalOpen, setStockModalOpen] = useState(false);
     const [stockProduct, setStockProduct] = useState(null);
-    const [stockQty, setStockQty] = useState(0);
+    const [stockMode, setStockMode] = useState('add');
+    const [stockDelta, setStockDelta] = useState(0);
+    const [stockTarget, setStockTarget] = useState('');
     const [stockSubmitting, setStockSubmitting] = useState(false);
 
     const openStock = (p) => {
         setStockProduct(p);
-        setStockQty(0);
+        setStockMode('add');
+        setStockDelta(0);
+        setStockTarget('');
         setStockModalOpen(true);
     };
 
-    const submitStock = async () => {
-        if (!stockProduct || stockQty <= 0) return;
+    const refreshStock = async (pid) => {
+        try {
+            const info = await getStockInfo(pid);
+            setStockById(prev => ({ ...prev, [pid]: info || null }));
+        } catch {}
+    };
+
+    const submitDelta = async () => {
+        if (!stockProduct || stockDelta <= 0) return;
         setStockSubmitting(true);
         try {
             const pid = stockProduct.productUUID || stockProduct.id;
-            await addStock(pid, Number(stockQty));
-            // обновим конкретную позицию склада
-            try {
-                const info = await getStockInfo(pid);
-                setStockById(prev => ({ ...prev, [pid]: info }));
-            } catch {}
+            if (stockMode === 'add') {
+                await addStock(pid, Number(stockDelta));
+                toast.success('Склад пополнен');
+            } else {
+                await removeStock(pid, Number(stockDelta));
+                toast.success('Остаток уменьшен');
+            }
+            await refreshStock(pid);
             setStockModalOpen(false);
-            toast.success('Склад пополнен');
         } catch (e) {
-            toast.error(e.message || 'Не удалось пополнить склад');
+            toast.error(e.message || 'Не удалось изменить количество');
         } finally {
             setStockSubmitting(false);
         }
+    };
+
+    const submitSetExact = async () => {
+        const target = Number(stockTarget);
+        if (!stockProduct || !Number.isFinite(target) || target < 0) return;
+        setStockSubmitting(true);
+        try {
+            const pid = stockProduct.productUUID || stockProduct.id;
+            await setStock(pid, target);
+            toast.success('Остаток установлен');
+            await refreshStock(pid);
+            setStockModalOpen(false);
+        } catch (e) {
+            toast.error(e.message || 'Не удалось установить остаток');
+        } finally {
+            setStockSubmitting(false);
+        }
+    };
+
+    const currentStockInfo = (p) => {
+        const pid = p?.productUUID || p?.id;
+        return pid ? stockById[pid] : null;
     };
 
     return (
@@ -270,10 +302,16 @@ const Products = () => {
                 <StockModal
                     open={stockModalOpen}
                     product={stockProduct}
-                    qty={stockQty}
-                    onQtyChange={setStockQty}
+                    info={currentStockInfo(stockProduct)}
+                    mode={stockMode}
+                    onModeChange={setStockMode}
+                    delta={stockDelta}
+                    onDeltaChange={setStockDelta}
+                    target={stockTarget}
+                    onTargetChange={setStockTarget}
                     loading={stockSubmitting}
-                    onSubmit={submitStock}
+                    onApplyDelta={submitDelta}
+                    onSetExact={submitSetExact}
                     onClose={() => setStockModalOpen(false)}
                 />
             </div>
@@ -283,43 +321,106 @@ const Products = () => {
 
 export default Products;
 
-// В этом же файле (ниже) простой модал для пополнения склада
-function StockModal({ open, product, qty, onQtyChange, loading, onSubmit, onClose }) {
+function StockModal({
+                        open, product, info,
+                        mode, onModeChange,
+                        delta, onDeltaChange,
+                        target, onTargetChange,
+                        loading, onApplyDelta, onSetExact, onClose
+                    }) {
     if (!open) return null;
     const title = product?.title || 'Товар';
+    const onHand = Number(info?.quantityOnHand ?? 0);
+    const available = Number(info?.available ?? 0);
+    const reserved = Number(info?.quantityReserved ?? 0);
+
     return (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl">
                 <div className="px-5 py-4 border-b flex items-center justify-between">
-                    <h3 className="text-lg font-semibold">Пополнить склад</h3>
+                    <h3 className="text-lg font-semibold">Изменить количество</h3>
                     <button onClick={onClose} className="text-gray-500 hover:text-gray-700">&times;</button>
                 </div>
-                <div className="px-5 py-4 space-y-3">
-                    <div className="text-sm text-gray-700">Товар: <span className="font-medium">{title}</span></div>
-                    <div>
-                        <label className="block text-sm text-gray-600 mb-1">Количество</label>
-                        <input
-                            type="number"
-                            min="1"
-                            step="1"
-                            value={qty}
-                            onChange={(e) => onQtyChange(Math.max(0, Number(e.target.value)))}
-                            className="w-full border rounded px-3 py-2"
-                            placeholder="Например, 10"
-                        />
+
+                <div className="px-5 py-4 space-y-5">
+                    <div className="text-sm text-gray-700 flex flex-wrap gap-4">
+                        <div>Доступно: <span className="font-medium">{available}</span></div>
+                        <div>На полке: <span className="font-medium">{onHand}</span></div>
+                        <div>Резерв: <span className="font-medium">{reserved}</span></div>
+                    </div>
+
+                    {/* Блок 1: Пополнить/Уменьшить */}
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                            <Toggle active={mode==='add'} onClick={() => onModeChange('add')}>Пополнить</Toggle>
+                            <Toggle active={mode==='remove'} onClick={() => onModeChange('remove')}>Уменьшить</Toggle>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end">
+                            <div>
+                                <label className="block text-sm text-gray-600 mb-1">Количество</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    step="1"
+                                    value={delta}
+                                    onChange={(e) => onDeltaChange(Math.max(0, Number(e.target.value)))}
+                                    className="w-full border rounded px-3 py-2"
+                                    placeholder="Например, 10"
+                                />
+                            </div>
+                            <button
+                                onClick={onApplyDelta}
+                                disabled={loading || delta <= 0}
+                                className="px-4 py-2 rounded bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50"
+                            >
+                                Применить
+                            </button>
+                        </div>
+                    </div>
+
+                    <hr className="border-gray-200" />
+
+                    {/* Блок 2: Установить остаток */}
+                    <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end">
+                        <div>
+                            <label className="block text-sm text-gray-600 mb-1">Установить остаток (шт)</label>
+                            <input
+                                type="number"
+                                min="0"
+                                step="1"
+                                value={target}
+                                onChange={(e) => onTargetChange(e.target.value)}
+                                className="w-full border rounded px-3 py-2"
+                                placeholder={`Текущий: ${onHand}`}
+                            />
+                        </div>
+                        <button
+                            onClick={onSetExact}
+                            disabled={loading || target === '' || Number(target) < 0 || Number(target) === onHand}
+                            className="px-4 py-2 rounded bg-gray-800 hover:bg-gray-900 text-white disabled:opacity-50"
+                        >
+                            Установить
+                        </button>
                     </div>
                 </div>
-                <div className="px-5 py-4 border-t flex justify-end gap-2">
+
+                <div className="px-5 py-4 border-t flex justify-end">
                     <button onClick={onClose} className="px-4 py-2 rounded border">Отмена</button>
-                    <button
-                        onClick={onSubmit}
-                        disabled={loading || qty <= 0}
-                        className="px-4 py-2 rounded bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50"
-                    >
-                        {loading ? 'Сохранение…' : 'Добавить'}
-                    </button>
                 </div>
             </div>
         </div>
+    );
+}
+
+function Toggle({ active, onClick, children }) {
+    return (
+        <button
+            onClick={onClick}
+            className={`px-3 py-1.5 rounded border text-sm ${
+                active ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-800 hover:bg-gray-50'
+            }`}
+        >
+            {children}
+        </button>
     );
 }

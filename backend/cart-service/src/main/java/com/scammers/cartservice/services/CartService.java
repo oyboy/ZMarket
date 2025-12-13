@@ -55,6 +55,7 @@ public class CartService {
 
         CartItemEntity item = CartItemEntity.builder()
                 .productId(productId)
+                .sellerId(product.sellerId())
                 .quantity(newQty)
                 .title(product.title())
                 .price(product.price())
@@ -77,7 +78,7 @@ public class CartService {
     private CartDto mapToDto(CartEntity entity) {
         List<CartItemDto> items = entity.getItems().stream()
                 .map(i -> new CartItemDto(
-                        i.getProductId(), i.getTitle(), i.getPrice(),
+                        i.getProductId(), i.getSellerId(), i.getTitle(), i.getPrice(),
                         i.getQuantity(), i.getImageUrl(), i.getSellerName()
                 ))
                 .toList();

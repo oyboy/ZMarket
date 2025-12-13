@@ -3,14 +3,20 @@ import { getCart, addToCart, setCartItemQuantity, removeFromCart, clearCart } fr
 import { formatPrice } from '../../../utils/format';
 import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '../../Shared/ToastProvider';
+import { createOrder } from '../../../services/orders';
 
 export default function CartPage({ onRequireAuth }) {
-    const token = localStorage.getItem('jwtToken');
-    const navigate = useNavigate();
     const toast = useToast();
+    const navigate = useNavigate();
+
+    const token = localStorage.getItem('jwtToken');
 
     const [cart, setCart] = useState({ cartItems: [], totalItems: 0, totalPrice: 0 });
     const [loading, setLoading] = useState(false);
+
+    const [checkoutOpen, setCheckoutOpen] = useState(false);
+    const [addr, setAddr] = useState('');
+    const [creating, setCreating] = useState(false);
 
     const load = async () => {
         setLoading(true);
@@ -29,7 +35,10 @@ export default function CartPage({ onRequireAuth }) {
     };
 
     useEffect(() => {
-        if (!token) { onRequireAuth?.(); return; }
+        if (!token) {
+            onRequireAuth?.();
+            return;
+        }
         load();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [token]);
@@ -40,7 +49,7 @@ export default function CartPage({ onRequireAuth }) {
             await load();
             toast.success('Добавлено в корзину');
         } catch (e) {
-            toast.error(e.message || 'Не удалось добавить в корзину');
+            toast.error(e.message || 'Не удалось добавить');
         }
     };
 
@@ -48,11 +57,10 @@ export default function CartPage({ onRequireAuth }) {
         try {
             if (currentQty > 1) {
                 await setCartItemQuantity(pId, currentQty - 1);
-                await load();
             } else {
                 await removeFromCart(pId);
-                await load();
             }
+            await load();
         } catch (e) {
             toast.error(e.message || 'Не удалось изменить количество');
         }
@@ -134,9 +142,54 @@ export default function CartPage({ onRequireAuth }) {
                     <div className="mt-4 flex items-center gap-3">
                         <button onClick={onClear} className="px-4 py-2 rounded border">Очистить</button>
                         <button onClick={() => navigate('/')} className="px-4 py-2 rounded border">Продолжить покупки</button>
-                        <button className="px-4 py-2 rounded bg-blue-600 text-white">Оформить заказ</button>
+                        <button onClick={() => setCheckoutOpen(true)} className="px-4 py-2 rounded bg-blue-600 text-white">Оформить заказ</button>
                     </div>
                 </>
+            )}
+
+            {checkoutOpen && (
+                <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
+                    <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+                        <div className="px-5 py-4 border-b flex items-center justify-between">
+                            <h3 className="text-lg font-semibold">Оформление заказа</h3>
+                            <button onClick={() => setCheckoutOpen(false)} className="text-gray-500 hover:text-gray-700">&times;</button>
+                        </div>
+                        <div className="px-5 py-4 space-y-3">
+                            <label className="block text-sm text-gray-600 mb-1">Адрес доставки</label>
+                            <textarea
+                                rows={3}
+                                value={addr}
+                                onChange={(e) => setAddr(e.target.value)}
+                                className="w-full border rounded px-3 py-2 text-sm"
+                                placeholder="Город, улица, дом, квартира..."
+                            />
+                        </div>
+                        <div className="px-5 py-4 border-t flex justify-end gap-2">
+                            <button onClick={() => setCheckoutOpen(false)} className="px-4 py-2 rounded border">Отмена</button>
+                            <button
+                                onClick={async () => {
+                                    const value = addr.trim();
+                                    if (!value) { toast.warn('Укажите адрес'); return; }
+                                    setCreating(true);
+                                    try {
+                                        const order = await createOrder({ deliveryAddress: value });
+                                        toast.success('Заказ создан');
+                                        setCheckoutOpen(false);
+                                        navigate(`/orders/${order.id}`);
+                                    } catch (e) {
+                                        toast.error(e.message || 'Не удалось создать заказ');
+                                    } finally {
+                                        setCreating(false);
+                                    }
+                                }}
+                                disabled={creating || !addr.trim()}
+                                className="px-4 py-2 rounded bg-blue-600 text-white disabled:opacity-50"
+                            >
+                                {creating ? 'Создаём…' : 'Создать заказ'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );
