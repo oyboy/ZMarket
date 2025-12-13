@@ -4,6 +4,7 @@ import com.scammers.userservice.models.BuyerProfile;
 import com.scammers.userservice.models.SellerProfile;
 import com.scammers.userservice.models.dtos.BuyerContactInfoDto;
 import com.scammers.userservice.models.dtos.SellerInfoDto;
+import com.scammers.userservice.models.requests.UpdateSellerProfileRequest;
 import com.scammers.userservice.services.KeycloakUserService;
 import com.scammers.userservice.models.requests.CompanyRegistrationRequest;
 import com.scammers.userservice.models.requests.UserRegistrationRequest;
@@ -12,13 +13,13 @@ import com.scammers.userservice.models.responses.UserRegistrationResponse;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.UUID;
 
@@ -29,13 +30,53 @@ import java.util.UUID;
 public class UserController {
     private final KeycloakUserService userService;
 
+    @PutMapping("/seller/profile")
+    @PreAuthorize("hasAuthority('SELLER')")
+    public ApiResponse<SellerInfoDto> updateSellerProfile(
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody UpdateSellerProfileRequest req) {
+
+        UUID userId = extractUserId(jwt);
+        SellerProfile updatedProfile = userService.updateSellerProfile(userId, req);
+
+        return ApiResponse.ok(SellerInfoDto.from(updatedProfile));
+    }
+
+    @PostMapping(value = "/seller/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAuthority('SELLER')")
+    public ApiResponse<String> uploadAvatar(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam("file") MultipartFile file) {
+
+        UUID userId = extractUserId(jwt);
+        String url = userService.uploadSellerAvatar(userId, file);
+
+        return ApiResponse.ok(url);
+    }
+
+    @DeleteMapping("/seller/avatar")
+    @PreAuthorize("hasAuthority('SELLER')")
+    public ApiResponse<Void> deleteAvatar(
+            @AuthenticationPrincipal Jwt jwt) {
+
+        UUID userId = extractUserId(jwt);
+        userService.deleteSellerAvatar(userId);
+
+        return ApiResponse.success("Avatar has deleted");
+    }
+
     @GetMapping("/{user-id}/seller-info")
-    public ResponseEntity<ApiResponse<SellerInfoDto>> getSellerInfo(@PathVariable("user-id") UUID sellerId) {
+    public ApiResponse<SellerInfoDto> getSellerInfo(@PathVariable("user-id") UUID sellerId) {
         SellerProfile profile = userService.getSellerProfile(sellerId)
                 .orElseThrow(() -> new EntityNotFoundException("Профиль продавца не найден"));
-        return ResponseEntity
-                .status(HttpStatus.OK)
-                .body(ApiResponse.ok(SellerInfoDto.from(profile)));
+        return ApiResponse.ok(SellerInfoDto.from(profile));
+    }
+
+    @GetMapping("/{userId}/contact-info")
+    public ApiResponse<BuyerContactInfoDto> getUserContactInfo(@PathVariable("userId") UUID userId) {
+        BuyerProfile profile = userService.getBuyerProfile(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Профиль покупателя не найден"));
+        return ApiResponse.ok(BuyerContactInfoDto.from(profile));
     }
 
     @GetMapping("/{userId}/contact-info")
@@ -48,23 +89,21 @@ public class UserController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<ApiResponse<UserRegistrationResponse>> register(@Valid @RequestBody UserRegistrationRequest req) {
+    public ApiResponse<UserRegistrationResponse> register(@Valid @RequestBody UserRegistrationRequest req) {
         var id = userService.registerUser(req);
 
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(new UserRegistrationResponse(id)));
+        return ApiResponse.ok(new UserRegistrationResponse(id));
     }
 
     @PostMapping("/become-seller")
     @PreAuthorize("hasAuthority('USER')")
-    public ResponseEntity<ApiResponse<Void>> becomeSeller(@AuthenticationPrincipal Jwt jwt,
+    public ApiResponse<Void> becomeSeller(@AuthenticationPrincipal Jwt jwt,
                                           @Valid @RequestBody CompanyRegistrationRequest req) {
 
         UUID userId = extractUserId(jwt);
 
         userService.upgradeToSeller(userId, req);
-        return ResponseEntity.ok(ApiResponse.success("Вы успешно стали продавцом"));
+        return ApiResponse.success("Вы успешно стали продавцом");
     }
 
     private UUID extractUserId(Jwt jwt) {

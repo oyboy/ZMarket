@@ -7,6 +7,7 @@ import com.scammers.userservice.models.SellerProfile;
 import com.scammers.userservice.models.User;
 import com.scammers.userservice.models.enums.VerificationStatus;
 import com.scammers.userservice.models.requests.CompanyRegistrationRequest;
+import com.scammers.userservice.models.requests.UpdateSellerProfileRequest;
 import com.scammers.userservice.models.requests.UserRegistrationRequest;
 import com.scammers.userservice.repositories.BuyerProfileRepository;
 import com.scammers.userservice.repositories.SellerProfileRepository;
@@ -21,6 +22,7 @@ import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -37,6 +39,7 @@ public class KeycloakUserService {
     private final UserRepository userRepository;
     private final SellerProfileRepository sellerProfileRepository;
     private final BuyerProfileRepository buyerProfileRepository;
+    private final StorageService storageService;
 
     private static final String USER_ROLE = "USER";
 
@@ -141,6 +144,42 @@ public class KeycloakUserService {
                 .roles()
                 .realmLevel()
                 .add(List.of(role));
+    }
+
+    @Transactional
+    public SellerProfile updateSellerProfile(UUID userId, UpdateSellerProfileRequest req) {
+        SellerProfile profile = sellerProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Профиль продавца не найден"));
+
+        profile.setCompanyName(req.getCompanyName());
+        profile.setDescription(req.getDescription());
+
+        return sellerProfileRepository.save(profile);
+    }
+
+    @Transactional
+    public String uploadSellerAvatar(UUID userId, MultipartFile file) {
+        SellerProfile profile = sellerProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Профиль продавца не найден"));
+
+        String fileName = storageService.uploadAvatar(userId, file);
+        String fullUrl = storageService.getPublicUrl(fileName);
+        profile.setAvatarUrl(fullUrl);
+
+        sellerProfileRepository.save(profile);
+
+        return fullUrl;
+    }
+
+    @Transactional
+    public void deleteSellerAvatar(UUID userId) {
+        SellerProfile profile = sellerProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Профиль продавца не найден"));
+
+        storageService.deleteFile(profile.getAvatarUrl());
+        profile.setAvatarUrl(null);
+
+        sellerProfileRepository.save(profile);
     }
 
     public Optional<SellerProfile> getSellerProfile(UUID userId) {

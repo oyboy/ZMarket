@@ -9,11 +9,13 @@ import lombok.Data;
 public class SellerInfoDto {
     private String sellerName;
     private String description;
+    private String avatarUrl;
 
     public static SellerInfoDto from(SellerProfile sellerProfile) {
         return new SellerInfoDto(
-            sellerProfile.getCompanyName(),
-            sellerProfile.getDescription()
+                sellerProfile.getCompanyName(),
+                sellerProfile.getDescription(),
+                sellerProfile.getAvatarUrl()
         );
     }
 }
