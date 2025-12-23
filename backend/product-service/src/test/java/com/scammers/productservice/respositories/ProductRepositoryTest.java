@@ -21,7 +21,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DataJdbcTest
 @Import({ProductRepository.class, ProductRowMapper.class})
 @TestPropertySource(properties = {
-        "spring.sql.init.mode=always"
+        "spring.sql.init.mode=always",
+        "services.ratings-aggregator.url=http://localhost:8072/revaggservice",
+        "services.warehouse-service.url=http://localhost:8072/warehouseservice"
 })
 @ActiveProfiles("test")
 @Sql(scripts = "/h2/test-table.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_CLASS)
@@ -119,7 +121,7 @@ class ProductRepositoryTest {
         assertThat(updated.getTitle()).isEqualTo("Updated Title");
         assertThat(updated.getDescription()).isEqualTo("Updated Description");
         assertThat(updated.getPrice()).isEqualTo(150.0);
-        assertThat(updated.getStock()).isEqualTo(8);
+        assertThat(updated.getStock()).isEqualTo(5); //теперь кол-во не обновляется напрямую
     }
 
     @Test

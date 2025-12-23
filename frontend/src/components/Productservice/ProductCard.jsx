@@ -11,10 +11,17 @@ const PRODUCTS_API =
     process.env.REACT_APP_PRODUCTS_URL ||
     'http://localhost:8072/productservice/api/v1';
 
-const extractAttachmentIds = (p) => {
+const Placeholder = () => (
+    <svg className="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+    </svg>
+);
+
+const extractAttachmentKeys = (p) => {
     if (Array.isArray(p?.attachments) && p.attachments.length) {
-        return p.attachments.map((a) => a?.gridFsId || a?.id || a).filter(Boolean);
+        return p.attachments.map(a => a?.objectKey || a?.key || a).filter(Boolean);
     }
+    if (p?.mainAttachmentKey) return [p.mainAttachmentKey];
     if (p?.mainAttachmentId) return [p.mainAttachmentId];
     return [];
 };
@@ -63,22 +70,19 @@ const ProductCard = ({
                          onDeleteAttachment,
                          stockInfo,
                          onOpenStock
-}) => {
+                     }) => {
     const requireAuth = typeof onRequireAuth === 'function' ? onRequireAuth : () => alert('Нужно войти');
 
-    // --- rating из товара как базовый (fallback) ---
     const initialAvg = getRatingValue(product);
     const initialCnt = getRatingCount(product);
 
     const [avg, setAvg] = useState(initialAvg);
     const [count, setCount] = useState(initialCnt);
     const [ratingLoading, setRatingLoading] = useState(false);
-    const [ratingError, setRatingError] = useState('');
 
     const token = useMemo(() => localStorage.getItem('jwtToken'), []);
     const roles = useMemo(() => (token ? getRolesFromToken(token) : []), [token]);
     const isUser = roles.includes('USER') || roles.includes('ROLE_USER');
-
 
     const productId = useMemo(() => product.productUUID || product.id, [product]);
     const navigate = useNavigate();
@@ -88,27 +92,30 @@ const ProductCard = ({
         navigate(`/product/${productId}`);
     };
 
-    // --- images logic ---
-    const initialIds = useMemo(() => extractAttachmentIds(product), [product]);
-    const [attachmentIds, setAttachmentIds] = useState(initialIds);
-    const [fetchedAll, setFetchedAll] = useState(Array.isArray(product?.attachments) && product.attachments.length > 0);
+    const initialKeys = useMemo(() => extractAttachmentKeys(product), [product]);
+    const [attachmentKeys, setAttachmentKeys] = useState(initialKeys);
+    const [fetchedAll, setFetchedAll] = useState(
+        Array.isArray(product?.attachments) && product.attachments.length > 0
+    );
     const [currentIdx, setCurrentIdx] = useState(0);
 
     const [hostRef, inView] = useInViewportOnce(0.2);
-    const imageId = attachmentIds[currentIdx];
-    const imgSrc = inView && imageId ? `${PRODUCTS_API}/products/${imageId}/attachments-fs` : null;
+    const imageKey = attachmentKeys[currentIdx];
+    const imgSrc = inView && imageKey
+        ? `${PRODUCTS_API}/products/attachments/download?key=${encodeURIComponent(imageKey)}`
+        : null;
 
-    const fetchAllIds = useCallback(async () => {
+    const fetchAllKeys = useCallback(async () => {
         if (fetchedAll || !productId) return false;
         try {
             const res = await fetch(`${PRODUCTS_API}/products/${productId}/attachments`);
             if (!res.ok) return false;
             const list = await res.json();
-            const ids = Array.isArray(list) ? list.map(a => a?.gridFsId || a?.id).filter(Boolean) : [];
-            if (ids.length) {
-                setAttachmentIds(ids);
+            const keys = Array.isArray(list) ? list.map(a => a?.objectKey || a?.key).filter(Boolean) : [];
+            if (keys.length) {
+                setAttachmentKeys(keys);
                 setFetchedAll(true);
-                setCurrentIdx(i => Math.min(i, ids.length - 1));
+                setCurrentIdx(0);
                 return true;
             }
         } catch {}
@@ -119,34 +126,34 @@ const ProductCard = ({
         let cancelled = false;
         (async () => {
             if (!inView) return;
-            if (attachmentIds.length > 0) return;
-            const ok = await fetchAllIds();
-            if (!cancelled && !ok) {
-                // оставим плейсхолдер
+            if (!fetchedAll && attachmentKeys.length <= 1) {
+                await fetchAllKeys();
             }
         })();
         return () => { cancelled = true; };
-    }, [inView, attachmentIds.length, fetchAllIds]);
+    }, [inView, fetchedAll, attachmentKeys.length, fetchAllKeys]);
 
     const goPrev = useCallback(async (e) => {
         e?.stopPropagation?.();
-        if (!fetchedAll && attachmentIds.length <= 1) {
-            const ok = await fetchAllIds();
-            if (!ok || attachmentIds.length <= 1) return;
+        e?.preventDefault?.();
+        if (!fetchedAll && attachmentKeys.length <= 1) {
+            const ok = await fetchAllKeys();
+            if (!ok || attachmentKeys.length <= 1) return;
         }
-        setCurrentIdx(i => (i - 1 + attachmentIds.length) % attachmentIds.length);
-    }, [fetchedAll, attachmentIds.length, fetchAllIds]);
+        setCurrentIdx(i => (i - 1 + attachmentKeys.length) % attachmentKeys.length);
+    }, [fetchedAll, attachmentKeys.length, fetchAllKeys]);
 
     const goNext = useCallback(async (e) => {
         e?.stopPropagation?.();
-        if (!fetchedAll && attachmentIds.length <= 1) {
-            const ok = await fetchAllIds();
-            if (!ok || attachmentIds.length <= 1) return;
+        e?.preventDefault?.();
+        if (!fetchedAll && attachmentKeys.length <= 1) {
+            const ok = await fetchAllKeys();
+            if (!ok || attachmentKeys.length <= 1) return;
         }
-        setCurrentIdx(i => (i + 1) % attachmentIds.length);
-    }, [fetchedAll, attachmentIds.length, fetchAllIds]);
+        setCurrentIdx(i => (i + 1) % attachmentKeys.length);
+    }, [fetchedAll, attachmentKeys.length, fetchAllKeys]);
 
-    const hasCarousel = attachmentIds.length > 1;
+    const hasCarousel = attachmentKeys.length > 1;
 
     const uploadInputId = `upload-${productId}`;
     const handleFileChange = (e) => {
@@ -156,6 +163,7 @@ const ProductCard = ({
     };
 
     const toast = useToast();
+    const [actLoading, setActLoading] = useState(false);
 
     const handleAddToCart = async () => {
         const token = localStorage.getItem('jwtToken');
@@ -168,49 +176,76 @@ const ProductCard = ({
         }
     };
 
-    const handleSetMain = async () => {
-        if (!imageId || !onSetMainAttachment) return;
+    const handleSetMain = async (e) => {
+        e?.stopPropagation?.();
+        e?.preventDefault?.();
+        if (!imageKey || !onSetMainAttachment || actLoading) return;
+
+        setActLoading(true);
         try {
-            await onSetMainAttachment(product, imageId);
-            setAttachmentIds(prev => [imageId, ...prev.filter(id => id !== imageId)]);
-            setCurrentIdx(0);
-        } catch {}
+            await onSetMainAttachment(product, imageKey);
+
+            setAttachmentKeys(prev => {
+                const filtered = prev.filter(k => k !== imageKey);
+                const newKeys = [imageKey, ...filtered];
+                setCurrentIdx(0);
+                return newKeys;
+            });
+
+            toast.success('Сделано превью');
+        } catch {
+            toast.error('Не удалось установить превью');
+        } finally {
+            setActLoading(false);
+        }
     };
 
-    const handleDelete = async () => {
-        if (!imageId || !onDeleteAttachment) return;
+    const handleDelete = async (e) => {
+        e?.stopPropagation?.();
+        e?.preventDefault?.();
+        if (!imageKey || !onDeleteAttachment || actLoading) return;
+
+        setActLoading(true);
         try {
-            await onDeleteAttachment(product, imageId);
-            setAttachmentIds(prev => prev.filter(id => id !== imageId));
-            setCurrentIdx(i => Math.max(0, Math.min(i, attachmentIds.length - 2)));
-        } catch {}
+            await onDeleteAttachment(product, imageKey);
+
+            setAttachmentKeys(prev => {
+                const newKeys = prev.filter(k => k !== imageKey);
+                setCurrentIdx(prevIdx => {
+                    if (prevIdx >= newKeys.length && newKeys.length > 0) {
+                        return newKeys.length - 1;
+                    }
+                    return Math.max(0, prevIdx);
+                });
+                return newKeys;
+            });
+
+            toast.info('Изображение удалено');
+        } catch {
+            toast.error('Не удалось удалить изображение');
+        } finally {
+            setActLoading(false);
+        }
     };
 
-    // ===================== REVIEWS: загрузка рейтинга ======================
     const [ratingLoadedOnce, setRatingLoadedOnce] = useState(false);
-
     const loadRating = useCallback(async () => {
         if (!productId) return;
         try {
             setRatingLoading(true);
-            setRatingError('');
             const r = await getProductRating(productId);
             const newAvg = Number(r?.avg ?? r?.average ?? 0);
             const newCnt = Number(r?.cnt ?? r?.count ?? 0);
             if (Number.isFinite(newAvg)) setAvg(newAvg);
             if (Number.isFinite(newCnt)) setCount(newCnt);
             setRatingLoadedOnce(true);
-        } catch {
-            setRatingError('Не удалось получить рейтинг');
-        } finally {
+        } catch {} finally {
             setRatingLoading(false);
         }
     }, [productId]);
 
     useEffect(() => {
-        if (inView && !ratingLoadedOnce) {
-            loadRating();
-        }
+        if (inView && !ratingLoadedOnce) loadRating();
     }, [inView, ratingLoadedOnce, loadRating]);
 
     return (
@@ -237,28 +272,47 @@ const ProductCard = ({
                                     <svg className="w-5 h-5 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                                 </button>
                                 <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5 z-20">
-                                    {attachmentIds.map((_, i) => (
-                                        <span key={i} data-role="gallery-control" onClick={(e) => { e.stopPropagation(); setCurrentIdx(i); }} className={`h-1.5 rounded-full cursor-pointer transition-all ${i === currentIdx ? 'w-4 bg-white' : 'w-2 bg-white/60 hover:bg-white/80'}`} />
+                                    {attachmentKeys.map((_, i) => (
+                                        <span
+                                            key={i}
+                                            data-role="gallery-control"
+                                            onClick={(e) => { e.stopPropagation(); e.preventDefault(); setCurrentIdx(i); }}
+                                            className={`h-1.5 rounded-full cursor-pointer transition-all ${i === currentIdx ? 'w-4 bg-white' : 'w-2 bg-white/60 hover:bg-white/80'}`}
+                                        />
                                     ))}
                                 </div>
                             </>
                         )}
-                        {showUpload && imageId && (
+                        {showUpload && imageKey && (
                             <div className="absolute top-2 right-2 z-30 flex gap-2">
-                                <button type="button" onClick={handleSetMain} title="Сделать превью" className="bg-white/90 hover:bg-white text-yellow-600 rounded-full p-2 shadow">
-                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81л-2.8 2.034..." /></svg>
+                                <button
+                                    type="button"
+                                    onClick={handleSetMain}
+                                    title="Сделать превью"
+                                    className="bg-white/90 hover:bg-white text-yellow-600 rounded-full p-2 shadow"
+                                    disabled={actLoading || currentIdx === 0}
+                                >
+                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                    </svg>
                                 </button>
-                                <button type="button" onClick={handleDelete} title="Удалить фото" className="bg-white/90 hover:bg-white text-red-600 rounded-full p-2 shadow">
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7л-..." /></svg>
+                                <button
+                                    type="button"
+                                    onClick={handleDelete}
+                                    title="Удалить фото"
+                                    className="bg-white/90 hover:bg-white text-red-600 rounded-full p-2 shadow"
+                                    disabled={actLoading}
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862а2 2 0 01-1.995-1.858L5 7m5 4v6m4-6в6M9 7V4h6v3м-9 0h12" />
+                                    </svg>
                                 </button>
                             </div>
                         )}
                     </>
                 ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                        <svg className="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                        </svg>
+                        <Placeholder />
                     </div>
                 )}
 
@@ -274,7 +328,9 @@ const ProductCard = ({
                 )}
             </div>
 
+            {/* Остальная часть карточки без изменений */}
             <div className="p-4">
+                {/* ... весь нижний блок как был ... */}
                 <div className="flex items-start justify-between mb-2">
                     <h3 className="font-semibold text-gray-900 text-sm leading-tight line-clamp-2">
                         <Link to={`/product/${productId}`} className="hover:underline">{product.title}</Link>
@@ -307,46 +363,28 @@ const ProductCard = ({
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 mt-2">
-                    {canManage && (
-                        <button
-                            onClick={() => onEdit && onEdit(product)}
-                            className="px-3 py-1.5 rounded-lg text-sm font-medium bg-green-600 hover:bg-green-700 text-white shrink-0"
-                        >
+                    {canManage && onEdit && (
+                        <button onClick={() => onEdit(product)} className="px-3 py-1.5 rounded-lg text-sm font-medium bg-green-600 hover:bg-green-700 text-white shrink-0">
                             Редактировать
                         </button>
                     )}
                     {canManage && onOpenStock && (
-                        <button
-                            onClick={() => onOpenStock(product)}
-                            className="px-3 py-1.5 rounded-lg text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white shrink-0"
-                        >
+                        <button onClick={() => onOpenStock(product)} className="px-3 py-1.5 rounded-lg text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white shrink-0">
                             Изменить количество
                         </button>
                     )}
                     {showUpload && (
                         <>
-                            <input
-                                id={uploadInputId}
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                onChange={handleFileChange}
-                            />
-                            <label
-                                htmlFor={uploadInputId}
-                                className="cursor-pointer px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-800 shrink-0"
-                            >
+                            <input id={uploadInputId} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                            <label htmlFor={uploadInputId} className="cursor-pointer px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-800 shrink-0">
                                 Загрузить фото
                             </label>
                         </>
                     )}
-
                     {canManage && stockInfo && (
                         <div className="basis-full text-xs text-gray-600 pt-1">
                             На складе: <span className="font-medium">{stockInfo.available}</span>
-                            {typeof stockInfo.quantityReserved === 'number' && (
-                                <span className="ml-2 text-gray-500">резерв: {stockInfo.quantityReserved}</span>
-                            )}
+                            {typeof stockInfo.quantityReserved === 'number' && <span className="ml-2 text-gray-500">резерв: {stockInfo.quantityReserved}</span>}
                         </div>
                     )}
                 </div>

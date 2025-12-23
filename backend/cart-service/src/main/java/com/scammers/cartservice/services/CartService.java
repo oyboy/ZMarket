@@ -50,7 +50,7 @@ public class CartService {
 
         String mainImageId = productClient.getMainImageId(productId);
         String imageUrl = mainImageId != null
-                ? productServiceUrl + "/api/v1/products/" + mainImageId + "/attachments-fs"
+                ? productServiceUrl + "/api/v1/products/attachments/download?key=" + mainImageId
                 : null;
 
         CartItemEntity item = CartItemEntity.builder()

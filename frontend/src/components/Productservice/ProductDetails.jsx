@@ -52,8 +52,14 @@ const ProductDetails = ({ onRequireAuth }) => {
     const roles = useMemo(() => (token ? getRolesFromToken(token) : []), [token]);
     const isUser = roles.includes('USER') || roles.includes('ROLE_USER');
 
-    const imageId = attachments[idx]?.gridFsId || attachments[idx]?.id || attachments[idx] || product?.mainAttachmentId;
-    const imgSrc = imageId ? `${PRODUCTS_API}/products/${imageId}/attachments-fs` : null;
+    const imageKey =
+        attachments[idx]?.objectKey ||
+        attachments[idx]?.key ||
+        attachments[idx] ||
+        product?.mainAttachmentKey ||
+        product?.mainAttachmentId;
+
+    const imgSrc = imageKey ? `${PRODUCTS_API}/products/attachments/download?key=${encodeURIComponent(imageKey)}` : null;
 
     const PAGE_SIZE = 10;
     const [rvPage, setRvPage] = useState(0);
@@ -119,7 +125,6 @@ const ProductDetails = ({ onRequireAuth }) => {
                 if (!prod) { setErr('Товар не найден'); return; }
                 setProduct(prod);
 
-                // отзывы первая страница
                 setReviewsLoading(true);
                 const pr = await getProductReviews(uuid, { limit: PAGE_SIZE, offset: 0 });
                 if (!alive) return;
@@ -128,7 +133,6 @@ const ProductDetails = ({ onRequireAuth }) => {
                 setRvHasMore(pr.length === PAGE_SIZE);
                 setReviewsLoading(false);
 
-                // вложения + рейтинг
                 const [attRes, ratRes] = await Promise.allSettled([
                     getProductAttachments(uuid),
                     getProductRating(uuid),
@@ -162,7 +166,6 @@ const ProductDetails = ({ onRequireAuth }) => {
 
     const handleBuy = () => {
         if (!token) { requireAuth(); return; }
-        // TODO: корзина/заказ
     };
 
     const submitReview = async () => {
@@ -207,7 +210,7 @@ const ProductDetails = ({ onRequireAuth }) => {
     }
     if (err || !product) {
         return (
-            <div className="max-w-3xl mx-auto p-6">
+            <div className="max-w-3xl mx	auto p-6">
                 <button onClick={() => navigate(-1)} className="text-blue-600 hover:underline mb-4">Назад</button>
                 <div className="text-red-600">{err || 'Товар не найден'}</div>
             </div>
@@ -240,10 +243,11 @@ const ProductDetails = ({ onRequireAuth }) => {
                     {attachments.length > 1 && (
                         <div className="mt-3 grid grid-cols-5 gap-2">
                             {attachments.map((a, i) => {
-                                const id = a?.gridFsId || a?.id || a;
+                                const key = a?.objectKey || a?.key || a;
+                                const url = key ? `${PRODUCTS_API}/products/attachments/download?key=${encodeURIComponent(key)}` : null;
                                 return (
-                                    <button key={id} onClick={() => setIdx(i)} className={`aspect-square rounded overflow-hidden border ${i === idx ? 'border-blue-600' : 'border-transparent'}`}>
-                                        <img src={`${PRODUCTS_API}/products/${id}/attachments-fs`} alt="" className="w-full h-full object-cover" />
+                                    <button key={key || i} onClick={() => setIdx(i)} className={`aspect-square rounded overflow-hidden border ${i === idx ? 'border-blue-600' : 'border-transparent'}`}>
+                                        {url ? <img src={url} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gray-200" />}
                                     </button>
                                 );
                             })}
@@ -266,7 +270,7 @@ const ProductDetails = ({ onRequireAuth }) => {
 
                     <div className="mt-6 flex items-center gap-3">
                         {isUser && (
-                            <button onClick={() => { if (!token) requireAuth(); else {/* TODO */} }} className="px-5 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white">Купить</button>
+                            <button onClick={() => { if (!token) requireAuth(); else {} }} className="px-5 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white">Купить</button>
                         )}
                         <button onClick={() => navigator.clipboard.writeText(window.location.href)} className="px-5 py-2 rounded border">Поделиться</button>
                     </div>
@@ -358,8 +362,8 @@ const ProductDetails = ({ onRequireAuth }) => {
                                                 <span className="text-sm text-gray-600">{Number(rv.rating || 0).toFixed(1)}</span>
                                             </div>
                                             <span className="text-xs text-gray-500">
-                                                {rv.createdAt ? new Date(rv.createdAt).toLocaleString() : ''}
-                                            </span>
+                        {rv.createdAt ? new Date(rv.createdAt).toLocaleString() : ''}
+                      </span>
                                         </div>
                                         {rv.text && <p className="mt-2 text-sm text-gray-800 whitespace-pre-wrap">{rv.text}</p>}
                                         <div className="mt-1 text-xs text-gray-500">{(rv.userId || '').substring(0, 8)}…</div>

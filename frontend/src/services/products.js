@@ -1,6 +1,5 @@
 export const PRODUCTS_API =
-    process.env.REACT_APP_PRODUCTS_URL ||
-    'http://localhost:8072/productservice/api/v1';
+    (process.env.REACT_APP_PRODUCTS_URL || 'http://localhost:8072/productservice/api/v1').replace(/\/+$/, '');
 
 export async function getProductById(productUUID) {
     const res = await fetch(`${PRODUCTS_API}/products/${productUUID}`, { headers: { Accept: 'application/json' } });
@@ -12,5 +11,8 @@ export async function getProductById(productUUID) {
 export async function getProductAttachments(productUUID) {
     const res = await fetch(`${PRODUCTS_API}/products/${productUUID}/attachments`, { headers: { Accept: 'application/json' } });
     if (!res.ok) return [];
-    return res.json(); // ожидаем массив [{gridFsId|id,...}]
+    return res.json();
 }
+
+export const buildAttachmentUrl = (key) =>
+    key ? `${PRODUCTS_API}/products/attachments/download?key=${encodeURIComponent(key)}` : null;

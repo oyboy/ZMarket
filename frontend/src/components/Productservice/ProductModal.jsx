@@ -78,7 +78,14 @@ const ProductModal = ({ open, isEdit, loading, formData, onChange, onSubmit, onC
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Фото товара</label>
                                     <input type="file" accept="image/*" onChange={handleImageChange} />
                                     {imageFile && (
-                                        <p className="text-xs text-gray-500 mt-1">Выбрано: {imageFile.name}</p>
+                                        <div className="mt-2 flex items-center gap-3">
+                                            <img
+                                                src={URL.createObjectURL(imageFile)}
+                                                alt=""
+                                                className="w-16 h-16 object-cover rounded border"
+                                            />
+                                            <p className="text-xs text-gray-500">Выбрано: {imageFile.name}</p>
+                                        </div>
                                     )}
                                 </div>
                             </div>
