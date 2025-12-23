@@ -15,4 +15,7 @@ import java.util.UUID;
 public interface UserClient {
     @GetMapping("/api/v1/users/{userId}/contact-info")
     ApiResponse<CustomerDetails> getUserContactInfo(@PathVariable UUID userId);
+
+    @GetMapping("/api/v1/users/demo/slow-contact-info/{userId}")
+    ApiResponse<CustomerDetails> getSlowUserContactInfo(@PathVariable UUID userId);
 }

@@ -21,6 +21,16 @@ public class CustomErrorDecoder implements ErrorDecoder {
     @Override
     public Exception decode(String methodKey, Response response) {
         String errorMessage = null;
+        String url = response.request().url();
+
+        String clientName = "unknown";
+        try {
+            if (response.request().requestTemplate() != null &&
+                    response.request().requestTemplate().feignTarget() != null) {
+                clientName = response.request().requestTemplate().feignTarget().name();
+            }
+        } catch (Exception ignored) {
+        }
 
         if (response.body() != null) {
             try (InputStream body = response.body().asInputStream()) {
@@ -38,7 +48,7 @@ public class CustomErrorDecoder implements ErrorDecoder {
         return switch (response.status()) {
             case 400 -> new BadRequestException(errorMessage);
             case 404 -> new NotFoundException(errorMessage);
-            case 500, 502, 503 -> new RuntimeException("Внешний сервис недоступен: " + errorMessage);
+            case 500, 502, 503 -> new ExternalServiceException(clientName, url, response.status(), "Внешний сервис недоступен: " + errorMessage);
             default -> new RuntimeException("Неизвестная ошибка (" + response.status() + "): " + errorMessage);
         };
     }
