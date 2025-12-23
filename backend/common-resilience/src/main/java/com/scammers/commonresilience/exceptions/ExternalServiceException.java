@@ -1,4 +1,4 @@
-package com.scammers.orderservice.exceptions;
+package com.scammers.commonresilience.exceptions;
 
 public class ExternalServiceException extends RuntimeException {
     private final int statusCode;

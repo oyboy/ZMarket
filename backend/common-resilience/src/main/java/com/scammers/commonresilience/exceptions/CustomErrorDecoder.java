@@ -1,7 +1,6 @@
-package com.scammers.orderservice.exceptions;
+package com.scammers.commonresilience.exceptions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.scammers.orderservice.models.responses.ErrorResponse;
 import feign.Response;
 import feign.codec.ErrorDecoder;
 import jakarta.ws.rs.BadRequestException;

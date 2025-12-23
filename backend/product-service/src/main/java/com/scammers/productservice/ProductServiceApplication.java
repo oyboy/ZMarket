@@ -6,10 +6,13 @@ import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-@SpringBootApplication
 @EnableFeignClients
 @EnableCaching
 @EnableScheduling
+@SpringBootApplication(scanBasePackages = {
+        "com.scammers.productservice",
+        "com.scammers.commonresilience"
+})
 public class ProductServiceApplication {
 
     public static void main(String[] args) {
