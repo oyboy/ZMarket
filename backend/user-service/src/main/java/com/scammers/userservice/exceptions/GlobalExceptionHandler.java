@@ -1,6 +1,8 @@
 package com.scammers.userservice.exceptions;
 
+import com.scammers.userservice.models.responses.ApiResponse;
 import com.scammers.userservice.models.responses.ErrorResponse;
+import io.github.resilience4j.ratelimiter.RequestNotPermitted;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.ConstraintViolationException;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
@@ -95,6 +98,16 @@ public class GlobalExceptionHandler {
                 null
         );
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+    }
+
+    @ExceptionHandler(RequestNotPermitted.class)
+    @ResponseStatus(HttpStatus.TOO_MANY_REQUESTS)
+    public ErrorResponse handleRequestNotPermitted(RequestNotPermitted ex) {
+        return new ErrorResponse(
+                HttpStatus.TOO_MANY_REQUESTS.value(),
+                "Высокая нагрузка на сервис, повторите позже",
+                null
+        );
     }
 
     @ExceptionHandler(Exception.class)
