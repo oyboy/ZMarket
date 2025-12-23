@@ -79,15 +79,6 @@ public class UserController {
         return ApiResponse.ok(BuyerContactInfoDto.from(profile));
     }
 
-    @GetMapping("/{userId}/contact-info")
-    public ResponseEntity<ApiResponse<BuyerContactInfoDto>> getUserContactInfo(@PathVariable("userId") UUID userId) {
-        BuyerProfile profile = userService.getBuyerProfile(userId)
-                .orElseThrow(() -> new EntityNotFoundException("Профиль покупателя не найден"));
-        return ResponseEntity
-                .status(HttpStatus.OK)
-                .body(ApiResponse.ok(BuyerContactInfoDto.from(profile)));
-    }
-
     @PostMapping("/register")
     public ApiResponse<UserRegistrationResponse> register(@Valid @RequestBody UserRegistrationRequest req) {
         var id = userService.registerUser(req);
