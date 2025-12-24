@@ -1,9 +1,9 @@
-CREATE TABLE product_details (
+CREATE TABLE IF NOT EXISTS product_details (
     product_id VARCHAR(255) PRIMARY KEY,
     main_attachment_key VARCHAR(500)
 );
 
-CREATE TABLE file_attachment (
+CREATE TABLE IF NOT EXISTS file_attachment (
     object_key VARCHAR(500) PRIMARY KEY,
     product_id VARCHAR(255),
     file_name VARCHAR(255),

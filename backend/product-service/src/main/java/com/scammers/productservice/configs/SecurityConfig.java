@@ -30,6 +30,7 @@ public class SecurityConfig {
                 .csrf().disable()
                 .authorizeHttpRequests(authz -> authz
                         .requestMatchers(HttpMethod.GET, "/api/v1/products/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/ratings/**").permitAll()
 
                         .requestMatchers(HttpMethod.POST, "/api/v1/products/{product_uuid}/reviews").authenticated()

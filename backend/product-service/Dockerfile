@@ -1,10 +1,10 @@
-FROM openjdk:21-slim as build
+FROM eclipse-temurin:21-jdk-alpine as build
 ARG JAR_FILE
 COPY ${JAR_FILE} app.jar
 
 RUN mkdir -p target/dependency && (cd target/dependency; jar -xf /app.jar)
 
-FROM openjdk:21-slim
+FROM eclipse-temurin:21-jre-alpine
 VOLUME /tmp
 
 ARG DEPENDENCY=/target/dependency

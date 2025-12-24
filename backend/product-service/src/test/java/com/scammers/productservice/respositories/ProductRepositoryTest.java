@@ -185,8 +185,8 @@ class ProductRepositoryTest {
             productRepository.save(product);
         }
 
-        List<Product> page1 = productRepository.findByOffsetSize(0, 2, "price");
-        List<Product> page2 = productRepository.findByOffsetSize(2, 2, "price");
+        List<Product> page1 = productRepository.findByOffsetSize(0, 2, "price", 0);
+        List<Product> page2 = productRepository.findByOffsetSize(2, 2, "price", 0);
 
         assertThat(page1).hasSize(2);
         assertThat(page2).hasSize(2);
@@ -214,7 +214,7 @@ class ProductRepositoryTest {
         productRepository.save(product1);
         productRepository.save(product2);
 
-        List<Product> result = productRepository.findByOffsetSize(0, 10, "invalid_column DESC");
+        List<Product> result = productRepository.findByOffsetSize(0, 10, "invalid_column DESC", 0);
 
         assertThat(result).hasSize(2);
     }

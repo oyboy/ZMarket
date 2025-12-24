@@ -8,6 +8,7 @@ export default function AdminDashboard() {
             <div className="space-y-3">
                 <Link to="/admin/pending-sellers" className="text-blue-600 hover:underline">Заявки на продавца</Link>
                 <Link to="/admin/rejected-sellers" className="text-blue-600 hover:underline">Отклонённые заявки</Link>
+                <Link to="/admin/categories" className="text-blue-600 hover:underline">Категории</Link>
             </div>
         </div>
     );

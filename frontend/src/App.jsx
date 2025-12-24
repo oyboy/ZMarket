@@ -10,6 +10,7 @@ import Products from './components/pages/seller/Products';
 import AdminDashboard from './components/pages/admin/Dashboard';
 import AdminPendingSellers from './components/pages/admin/PendingSellers';
 import AdminRejectedSellers from './components/pages/admin/RejectedSellers';
+import AdminCategories from "./components/pages/admin/AdminCategories";
 
 import RequireRole from './components/Productservice/Auth/RequireRole';
 import Header from './components/Productservice/Header';
@@ -204,6 +205,7 @@ export default function App() {
                     <Route path="/admin" element={<AdminDashboard />} />
                     <Route path="/admin/pending-sellers" element={<AdminPendingSellers />} />
                     <Route path="/admin/rejected-sellers" element={<AdminRejectedSellers />} />
+                    <Route path="/admin/categories" element={<AdminCategories />} />
                 </Route>
 
                 {/* FALLBACK */}

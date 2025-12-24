@@ -383,7 +383,7 @@ const ProductCard = ({
                     )}
                     {canManage && stockInfo && (
                         <div className="basis-full text-xs text-gray-600 pt-1">
-                            На складе: <span className="font-medium">{stockInfo.available}</span>
+                            На складе: <span className="font-medium">{product.stock}</span>
                             {typeof stockInfo.quantityReserved === 'number' && <span className="ml-2 text-gray-500">резерв: {stockInfo.quantityReserved}</span>}
                         </div>
                     )}

@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { getRolesFromToken } from '../../utils/jwt';
+import CatalogButton from '../Productservice/CatalogButton';
 
 export default function Header({
                                    token,
@@ -19,6 +20,7 @@ export default function Header({
             <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <Link to="/" className="font-bold text-lg">Marketplace</Link>
+                    <CatalogButton />
                     <Link to="/" className="text-gray-700 hover:text-gray-900">Каталог</Link>
                     {isSeller && <Link to="/seller" className="text-gray-700 hover:text-gray-900">Кабинет продавца</Link>}
                     {isAdmin && <Link to="/admin" className="text-gray-700 hover:text-gray-900">Админка</Link>}

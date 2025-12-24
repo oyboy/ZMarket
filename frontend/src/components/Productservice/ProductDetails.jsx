@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import StarRating from '../Shared/StarRating';
 import StarInput from '../Shared/StarInput';
 import { formatPrice } from '../../utils/format';
 import { getProductById, getProductAttachments, PRODUCTS_API } from '../../services/products';
 import { getProductRating, postReview, getProductReviews } from '../../services/reviews';
 import { getRolesFromToken } from '../../utils/jwt';
+import { getSellerInfo } from '../../services/users';
 
 const Bar = ({ label, value, total }) => {
     const pct = total > 0 ? Math.round((value * 100) / total) : 0;
@@ -20,12 +21,11 @@ const Bar = ({ label, value, total }) => {
     );
 };
 
-const maskUser = (id) => (id ? `${id.substring(0, 8)}…` : 'Пользователь');
-
 const ProductDetails = ({ onRequireAuth }) => {
     const requireAuth = (typeof onRequireAuth === 'function') ? onRequireAuth : () => alert('Нужно войти');
     const { uuid } = useParams();
     const navigate = useNavigate();
+    const PAGE_SIZE = 10;
 
     const [product, setProduct] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -36,7 +36,7 @@ const ProductDetails = ({ onRequireAuth }) => {
 
     const [avg, setAvg] = useState(0);
     const [cnt, setCnt] = useState(0);
-    const [b, setB] = useState({ b1:0, b2:0, b3:0, b4:0, b5:0 });
+    const [b, setB] = useState({ b1: 0, b2: 0, b3: 0, b4: 0, b5: 0 });
     const [ratingLoading, setRatingLoading] = useState(false);
 
     const [reviews, setReviews] = useState([]);
@@ -48,20 +48,6 @@ const ProductDetails = ({ onRequireAuth }) => {
     const [submitLoading, setSubmitLoading] = useState(false);
     const [submitMsg, setSubmitMsg] = useState('');
 
-    const token = useMemo(() => localStorage.getItem('jwtToken'), []);
-    const roles = useMemo(() => (token ? getRolesFromToken(token) : []), [token]);
-    const isUser = roles.includes('USER') || roles.includes('ROLE_USER');
-
-    const imageKey =
-        attachments[idx]?.objectKey ||
-        attachments[idx]?.key ||
-        attachments[idx] ||
-        product?.mainAttachmentKey ||
-        product?.mainAttachmentId;
-
-    const imgSrc = imageKey ? `${PRODUCTS_API}/products/attachments/download?key=${encodeURIComponent(imageKey)}` : null;
-
-    const PAGE_SIZE = 10;
     const [rvPage, setRvPage] = useState(0);
     const [rvHasMore, setRvHasMore] = useState(true);
     const [rvLoadingMore, setRvLoadingMore] = useState(false);
@@ -69,15 +55,18 @@ const ProductDetails = ({ onRequireAuth }) => {
     const [sortKey, setSortKey] = useState('positive');
     const [onlyWithText, setOnlyWithText] = useState(false);
 
+    const [sellerName, setSellerName] = useState('');
+    const [sellerLoading, setSellerLoading] = useState(false);
+
+    const token = useMemo(() => localStorage.getItem('jwtToken'), []);
+    const roles = useMemo(() => (token ? getRolesFromToken(token) : []), [token]);
+    const isUser = roles.includes('USER') || roles.includes('ROLE_USER');
+
     const hasCreatedAt = useMemo(
         () => reviews.some(rv => rv.createdAt),
         [reviews]
     );
 
-    const ts = (rv) => {
-        const d = rv.createdAt ? new Date(rv.createdAt) : null;
-        return d ? d.getTime() : 0;
-    };
     const displayedReviews = useMemo(() => {
         let arr = Array.isArray(reviews) ? [...reviews] : [];
         if (onlyWithText) arr = arr.filter(rv => (rv.text || '').trim().length > 0);
@@ -85,7 +74,7 @@ const ProductDetails = ({ onRequireAuth }) => {
         switch (sortKey) {
             case 'recent':
                 if (hasCreatedAt) {
-                    arr.sort((a, b) => ts(b) - ts(a));
+                    arr.sort((a, b) => (new Date(b.createdAt) - new Date(a.createdAt)));
                 } else {
                     arr.sort((a, b) => (b.rating || 0) - (a.rating || 0));
                 }
@@ -101,6 +90,17 @@ const ProductDetails = ({ onRequireAuth }) => {
         return arr;
     }, [reviews, onlyWithText, sortKey, hasCreatedAt]);
 
+    const imageKey =
+        attachments[idx]?.objectKey ||
+        attachments[idx]?.key ||
+        attachments[idx] ||
+        product?.mainAttachmentKey ||
+        product?.mainAttachmentId;
+
+    const imgSrc = imageKey
+        ? `${PRODUCTS_API}/products/attachments/download?key=${encodeURIComponent(imageKey)}`
+        : null;
+
     const loadMoreReviews = async () => {
         if (!rvHasMore || rvLoadingMore) return;
         setRvLoadingMore(true);
@@ -114,6 +114,7 @@ const ProductDetails = ({ onRequireAuth }) => {
         }
     };
 
+    // основная загрузка товара + отзывов + вложений + рейтинга
     useEffect(() => {
         let alive = true;
         (async () => {
@@ -125,6 +126,7 @@ const ProductDetails = ({ onRequireAuth }) => {
                 if (!prod) { setErr('Товар не найден'); return; }
                 setProduct(prod);
 
+                // отзывы
                 setReviewsLoading(true);
                 const pr = await getProductReviews(uuid, { limit: PAGE_SIZE, offset: 0 });
                 if (!alive) return;
@@ -133,13 +135,20 @@ const ProductDetails = ({ onRequireAuth }) => {
                 setRvHasMore(pr.length === PAGE_SIZE);
                 setReviewsLoading(false);
 
+                // вложения + рейтинг
+                setRatingLoading(true);
                 const [attRes, ratRes] = await Promise.allSettled([
                     getProductAttachments(uuid),
                     getProductRating(uuid),
                 ]);
                 if (!alive) return;
 
-                if (attRes.status === 'fulfilled') setAttachments(Array.isArray(attRes.value) ? attRes.value : []);
+                if (attRes.status === 'fulfilled') {
+                    setAttachments(Array.isArray(attRes.value) ? attRes.value : []);
+                } else {
+                    setAttachments([]);
+                }
+
                 if (ratRes.status === 'fulfilled') {
                     const data = ratRes.value || {};
                     const newAvg = Number(data?.avg ?? data?.average ?? 0);
@@ -153,19 +162,55 @@ const ProductDetails = ({ onRequireAuth }) => {
                         b4: Number(data?.b4 ?? 0),
                         b5: Number(data?.b5 ?? 0),
                     });
+                } else {
+                    setAvg(0);
+                    setCnt(0);
+                    setB({ b1: 0, b2: 0, b3: 0, b4: 0, b5: 0 });
                 }
             } catch {
-                setErr('Ошибка загрузки товара');
+                if (alive) setErr('Ошибка загрузки товара');
             } finally {
-                setLoading(false);
-                setRatingLoading(false);
+                if (alive) {
+                    setLoading(false);
+                    setRatingLoading(false);
+                }
             }
         })();
         return () => { alive = false; };
     }, [uuid]);
 
+    // загрузка имени продавца по sellerId
+    useEffect(() => {
+        let alive = true;
+        const loadSeller = async () => {
+            const sid = product?.seller_id || product?.sellerId;
+            if (!sid) { setSellerName('—'); return; }
+            try {
+                setSellerLoading(true);
+                const info = await getSellerInfo(sid);
+                if (!alive) return;
+                const name =
+                    info?.displayName ||
+                    info?.name ||
+                    info?.companyName ||
+                    info?.sellerName ||
+                    (typeof sid === 'string' ? `${sid.substring(0, 8)}…` : 'Продавец');
+                setSellerName(name);
+            } catch {
+                if (!alive) return;
+                const rawId = product?.seller_id || product?.sellerId;
+                setSellerName(rawId ? `${String(rawId).substring(0, 8)}…` : '—');
+            } finally {
+                if (alive) setSellerLoading(false);
+            }
+        };
+        if (product) loadSeller();
+        return () => { alive = false; };
+    }, [product]);
+
     const handleBuy = () => {
         if (!token) { requireAuth(); return; }
+        // TODO: логика покупки / добавления в корзину
     };
 
     const submitReview = async () => {
@@ -194,7 +239,9 @@ const ProductDetails = ({ onRequireAuth }) => {
                         setReviews(Array.isArray(rv) ? rv : []);
                         setRvPage(1);
                         setRvHasMore((rv || []).length === PAGE_SIZE);
-                    } catch {}
+                    } catch {
+                        // игнорируем
+                    }
                 }, 2500);
             }
         } catch (e) {
@@ -210,7 +257,7 @@ const ProductDetails = ({ onRequireAuth }) => {
     }
     if (err || !product) {
         return (
-            <div className="max-w-3xl mx	auto p-6">
+            <div className="max-w-3xl mx-auto p-6">
                 <button onClick={() => navigate(-1)} className="text-blue-600 hover:underline mb-4">Назад</button>
                 <div className="text-red-600">{err || 'Товар не найден'}</div>
             </div>
@@ -222,7 +269,8 @@ const ProductDetails = ({ onRequireAuth }) => {
             <button onClick={() => navigate(-1)} className="text-blue-600 hover:underline mb-4">Назад</button>
 
             <div className="grid grid-cols-12 gap-8">
-                <div className="col-span-12 lg:col-span-6">
+                {/* Левая колонка: фото и превью */}
+                <div className="col-span-12 lg:col-span-5">
                     <div className="relative aspect-square bg-gray-100 rounded overflow-hidden">
                         {imgSrc ? (
                             <img src={imgSrc} alt={product.title} className="w-full h-full object-cover" />
@@ -231,64 +279,140 @@ const ProductDetails = ({ onRequireAuth }) => {
                         )}
                         {attachments.length > 1 && (
                             <>
-                                <button onClick={() => setIdx(i => (i - 1 + attachments.length) % attachments.length)} className="absolute top-1/2 left-2 -translate-y-1/2 bg-white/80 p-2 rounded-full shadow">
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                                <button
+                                    onClick={() => setIdx(i => (i - 1 + attachments.length) % attachments.length)}
+                                    className="absolute top-1/2 left-2 -translate-y-1/2 bg-white/80 p-2 rounded-full shadow"
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                    </svg>
                                 </button>
-                                <button onClick={() => setIdx(i => (i + 1) % attachments.length)} className="absolute top-1/2 right-2 -translate-y-1/2 bg-white/80 p-2 rounded-full shadow">
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                                <button
+                                    onClick={() => setIdx(i => (i + 1) % attachments.length)}
+                                    className="absolute top-1/2 right-2 -translate-y-1/2 bg-white/80 p-2 rounded-full shadow"
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                    </svg>
                                 </button>
                             </>
                         )}
                     </div>
-                    {attachments.length > 1 && (
-                        <div className="mt-3 grid grid-cols-5 gap-2">
-                            {attachments.map((a, i) => {
+
+                    {/* миниатюры — всегда оставляем место, чтобы не прыгало */}
+                    <div className="mt-3 grid grid-cols-5 gap-2 min-h-[64px]">
+                        {attachments.length > 1 ? (
+                            attachments.map((a, i) => {
                                 const key = a?.objectKey || a?.key || a;
                                 const url = key ? `${PRODUCTS_API}/products/attachments/download?key=${encodeURIComponent(key)}` : null;
                                 return (
-                                    <button key={key || i} onClick={() => setIdx(i)} className={`aspect-square rounded overflow-hidden border ${i === idx ? 'border-blue-600' : 'border-transparent'}`}>
-                                        {url ? <img src={url} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gray-200" />}
+                                    <button
+                                        key={key || i}
+                                        onClick={() => setIdx(i)}
+                                        className={`aspect-square rounded overflow-hidden border ${i === idx ? 'border-blue-600' : 'border-transparent'}`}
+                                    >
+                                        {url ? (
+                                            <img src={url} alt="" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <div className="w-full h-full bg-gray-200" />
+                                        )}
                                     </button>
                                 );
-                            })}
-                        </div>
-                    )}
+                            })
+                        ) : (
+                            [...Array(5)].map((_, i) => (
+                                <div key={i} className="aspect-square rounded overflow-hidden bg-gray-100" />
+                            ))
+                        )}
+                    </div>
                 </div>
 
-                <div className="col-span-12 lg:col-span-6">
+                {/* Правая колонка: инфо, цена, продавец, рейтинг */}
+                <div className="col-span-12 lg:col-span-7 flex flex-col">
                     <h1 className="text-2xl font-bold">{product.title}</h1>
 
-                    <div className="mt-2 flex items-center gap-2">
+                    <div className="mt-2 flex items-center gap-3">
                         <StarRating rating={avg} />
-                        {!ratingLoading && cnt > 0 && <span className="text-sm text-gray-600">{avg.toFixed(1)} · {cnt} отзыв(ов)</span>}
-                        {ratingLoading && <span className="text-xs text-gray-400">обновляем…</span>}
+                        {!ratingLoading && cnt > 0 && (
+                            <span className="text-sm text-gray-600">
+                                {avg.toFixed(1)} · {cnt} отзыв(ов)
+                            </span>
+                        )}
+                        {(ratingLoading || cnt === 0) && (
+                            <span className="text-sm text-gray-400">
+                                {ratingLoading ? 'Обновляем…' : 'Нет отзывов'}
+                            </span>
+                        )}
                     </div>
 
                     <div className="mt-4 text-3xl font-semibold">{formatPrice(product.price)}</div>
-                    <div className="mt-2 text-sm text-gray-600">Статус: {product.stock > 0 ? 'В наличии' : 'Нет в наличии'}</div>
-                    <div className="mt-2 text-sm text-gray-600">Продавец: {product.seller_id || product.sellerId || '—'}</div>
+                    <div className="mt-2 text-sm text-gray-600">
+                        Статус: {product.stock > 0 ? 'В наличии' : 'Нет в наличии'}
+                    </div>
+                    <div className="mt-1 text-sm text-gray-600">
+                        Продавец:{' '}
+                        {sellerLoading ? (
+                            <span className="inline-block align-middle w-28 h-4 bg-gray-200 rounded animate-pulse" />
+                        ) : (
+                            <span className="font-medium">{sellerName || '—'}</span>
+                        )}
+                    </div>
 
                     <div className="mt-6 flex items-center gap-3">
                         {isUser && (
-                            <button onClick={() => { if (!token) requireAuth(); else {} }} className="px-5 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white">Купить</button>
+                            <button
+                                onClick={handleBuy}
+                                className="px-5 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white"
+                            >
+                                Купить
+                            </button>
                         )}
-                        <button onClick={() => navigator.clipboard.writeText(window.location.href)} className="px-5 py-2 rounded border">Поделиться</button>
+                        <button
+                            onClick={() => navigator.clipboard.writeText(window.location.href)}
+                            className="px-5 py-2 rounded border"
+                        >
+                            Поделиться
+                        </button>
                     </div>
 
+                    {/* Характеристики + атрибуты */}
+                    <div className="mt-8">
+                        <h2 className="text-lg font-semibold mb-2">Характеристики</h2>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 text-sm">
+                            <div className="flex justify-between">
+                                <span className="text-gray-500">Товарный номер</span>
+                                <span className="font-mono">{uuid}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-gray-500">Остаток</span>
+                                <span>{product.stock}</span>
+                            </div>
+                        </div>
+
+                        {product.attributes && Object.keys(product.attributes).length > 0 && (
+                            <div className="mt-4">
+                                <h3 className="text-md font-semibold mb-2">Атрибуты</h3>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 text-sm">
+                                    {Object.entries(product.attributes).map(([k, v]) => (
+                                        <div key={k} className="flex justify-between">
+                                            <span className="text-gray-500">{k}</span>
+                                            <span className="text-gray-800">
+                                                {typeof v === 'object' ? JSON.stringify(v) : String(v)}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Описание */}
                     <div className="mt-8">
                         <h2 className="text-lg font-semibold mb-2">Описание</h2>
                         <p className="text-gray-700 whitespace-pre-wrap">{product.description || '—'}</p>
                     </div>
 
-                    <div className="mt-8">
-                        <h2 className="text-lg font-semibold mb-2">Характеристики</h2>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 text-sm">
-                            <div className="flex justify-between"><span className="text-gray-500">UUID</span><span className="font-mono">{uuid}</span></div>
-                            <div className="flex justify-between"><span className="text-gray-500">Остаток</span><span>{product.stock}</span></div>
-                            <div className="flex justify-between"><span className="text-gray-500">Продавец</span><span className="font-mono">{product.seller_id || product.sellerId || '—'}</span></div>
-                        </div>
-                    </div>
-
+                    {/* Распределение оценок */}
                     <div className="mt-8">
                         <h2 className="text-lg font-semibold mb-2">Распределение оценок</h2>
                         <div className="space-y-1">
@@ -300,28 +424,49 @@ const ProductDetails = ({ onRequireAuth }) => {
                         </div>
                     </div>
 
+                    {/* Форма отзыва */}
                     <div className="mt-8">
                         <h2 className="text-lg font-semibold mb-2">Оставить отзыв</h2>
                         {!showForm ? (
-                            <button onClick={() => setShowForm(true)} className="text-blue-600 hover:underline">Написать отзыв</button>
+                            <button onClick={() => setShowForm(true)} className="text-blue-600 hover:underline">
+                                Написать отзыв
+                            </button>
                         ) : (
                             <div className="p-3 border rounded-lg bg-gray-50">
                                 <div className="flex items-center gap-2">
                                     <span className="text-sm text-gray-700">Ваша оценка:</span>
                                     <StarInput value={mark} onChange={setMark} />
                                 </div>
-                                <textarea className="mt-2 w-full border rounded-lg p-2 text-sm" rows={3} placeholder="Комментарий (необязательно)" value={text} onChange={(e) => setText(e.target.value)} />
+                                <textarea
+                                    className="mt-2 w-full border rounded-lg p-2 text-sm"
+                                    rows={3}
+                                    placeholder="Комментарий (необязательно)"
+                                    value={text}
+                                    onChange={(e) => setText(e.target.value)}
+                                />
                                 <div className="mt-2 flex items-center gap-2">
-                                    <button onClick={submitReview} disabled={submitLoading || mark < 1} className="px-3 py-1.5 rounded bg-blue-600 text-white text-sm disabled:opacity-50">
+                                    <button
+                                        onClick={submitReview}
+                                        disabled={submitLoading || mark < 1}
+                                        className="px-3 py-1.5 rounded bg-blue-600 text-white text-sm disabled:opacity-50"
+                                    >
                                         {submitLoading ? 'Отправка...' : 'Отправить'}
                                     </button>
-                                    <button onClick={() => setShowForm(false)} className="px-3 py-1.5 rounded border text-sm">Отмена</button>
-                                    {submitMsg && <span className="text-xs text-gray-600">{submitMsg}</span>}
+                                    <button
+                                        onClick={() => setShowForm(false)}
+                                        className="px-3 py-1.5 rounded border text-sm"
+                                    >
+                                        Отмена
+                                    </button>
+                                    {submitMsg && (
+                                        <span className="text-xs text-gray-600">{submitMsg}</span>
+                                    )}
                                 </div>
                             </div>
                         )}
                     </div>
 
+                    {/* Отзывы */}
                     <div className="mt-8">
                         <h2 className="text-lg font-semibold mb-2">Отзывы</h2>
 
@@ -359,14 +504,22 @@ const ProductDetails = ({ onRequireAuth }) => {
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-2">
                                                 <StarRating rating={Number(rv.rating || 0)} />
-                                                <span className="text-sm text-gray-600">{Number(rv.rating || 0).toFixed(1)}</span>
+                                                <span className="text-sm text-gray-600">
+                                                    {Number(rv.rating || 0).toFixed(1)}
+                                                </span>
                                             </div>
                                             <span className="text-xs text-gray-500">
-                        {rv.createdAt ? new Date(rv.createdAt).toLocaleString() : ''}
-                      </span>
+                                                {rv.createdAt ? new Date(rv.createdAt).toLocaleString() : ''}
+                                            </span>
                                         </div>
-                                        {rv.text && <p className="mt-2 text-sm text-gray-800 whitespace-pre-wrap">{rv.text}</p>}
-                                        <div className="mt-1 text-xs text-gray-500">{(rv.userId || '').substring(0, 8)}…</div>
+                                        {rv.text && (
+                                            <p className="mt-2 text-sm text-gray-800 whitespace-pre-wrap">
+                                                {rv.text}
+                                            </p>
+                                        )}
+                                        <div className="mt-1 text-xs text-gray-500">
+                                            {(rv.userId || '').substring(0, 8)}…
+                                        </div>
                                     </div>
                                 ))}
                             </div>
