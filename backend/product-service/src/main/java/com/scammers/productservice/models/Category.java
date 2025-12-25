@@ -7,13 +7,13 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Table;
 
 @Data
-@NoArgsConstructor
+@Table("categories")
 @AllArgsConstructor
-@Table
-public class FileAttachment {
+@NoArgsConstructor
+public class Category {
     @Id
-    private String objectKey;
-    private String productId;
-    private String fileName;
-    private String contentType;
+    private Long id;
+    private String name;
+    private Long parentId;
+    private String slug;
 }

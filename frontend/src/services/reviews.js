@@ -31,10 +31,41 @@ export async function getProductReviews(productUUID, { limit = 10, offset = 0 } 
     if (!res.ok) return [];
     const data = await res.json();
     return (Array.isArray(data) ? data : []).map((x, i) => ({
-        id: x.id ?? `${x.userId}-${i}`,
+        id: x.id ?? `${x.userId}-${i}`, // id отзыва, если есть
         userId: x.userId,
         rating: Number(x.rating ?? 0),
         text: x.text ?? '',
-        createdAt: x.updated_at ?? null
+        createdAt: x.updated_at ?? x.updatedAt ?? x.created_at ?? null,
     }));
+}
+
+export async function deleteMyReview(productUUID, token) {
+    if (!token) throw new Error('UNAUTHORIZED');
+    const res = await fetch(`${PRODUCTS_API}/products/${productUUID}/reviews`, {
+        method: 'DELETE',
+        headers: {
+            Accept: 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+    });
+    if (res.status === 401) throw new Error('UNAUTHORIZED');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return true;
+}
+
+export async function adminDeleteReview(productUUID, targetUserId, token) {
+    if (!token) throw new Error('UNAUTHORIZED');
+    const res = await fetch(
+        `${PRODUCTS_API}/products/${productUUID}/reviews/${targetUserId}`,
+        {
+            method: 'DELETE',
+            headers: {
+                Accept: 'application/json',
+                Authorization: `Bearer ${token}`,
+            },
+        }
+    );
+    if (res.status === 401) throw new Error('UNAUTHORIZED');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return true;
 }

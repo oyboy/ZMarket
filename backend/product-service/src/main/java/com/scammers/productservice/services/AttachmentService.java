@@ -2,131 +2,141 @@ package com.scammers.productservice.services;
 
 import com.scammers.productservice.models.FileAttachment;
 import com.scammers.productservice.models.ProductDetails;
+import com.scammers.productservice.repositories.FileAttachmentRepository;
 import com.scammers.productservice.repositories.ProductDetailsRepository;
-import jakarta.ws.rs.NotFoundException;
+import io.minio.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.bson.types.ObjectId;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.data.mongodb.gridfs.GridFsTemplate;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.IntStream;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class AttachmentService {
-    private final GridFsTemplate gridFsTemplate;
-    private final ProductDetailsRepository productDetailsRepository;
+    private final MinioClient minioClient;
+    private final ProductDetailsRepository productRepo;
+    private final FileAttachmentRepository attachmentRepo;
+
+    @Value("${minio.bucket-name}")
+    private String bucketName;
 
     @Transactional
-    public FileAttachment saveFileAttachment(MultipartFile file) throws IOException {
-        log.info("Saving attachment: {}", file.getOriginalFilename());
-        try (InputStream inputStream = file.getInputStream()) {
-            ObjectId gridFsId = gridFsTemplate.store(inputStream, file.getOriginalFilename(), file.getContentType());
+    public FileAttachment addAttachmentToProduct(String productId, MultipartFile file) {
+        ensureBucket();
 
-            FileAttachment attachment = new FileAttachment();
-            attachment.setId(gridFsId.toHexString());
-            attachment.setGridFsId(gridFsId.toHexString());
-            attachment.setFileName(file.getOriginalFilename());
-            attachment.setContentType(file.getContentType());
+        try {
+            String extension = StringUtils.getFilenameExtension(file.getOriginalFilename());
+            String objectKey = productId + "/" + UUID.randomUUID() + (extension != null ? "." + extension : "");
+
+            attachmentRepo.saveNew(objectKey, productId, file.getOriginalFilename(), file.getContentType());
+
+            minioClient.putObject(
+                    PutObjectArgs.builder()
+                            .bucket(bucketName)
+                            .object(objectKey)
+                            .stream(file.getInputStream(), file.getSize(), -1)
+                            .contentType(file.getContentType())
+                            .build()
+            );
+
+            FileAttachment attachment = new FileAttachment(objectKey, productId, file.getOriginalFilename(), file.getContentType());
+
+            ProductDetails details = productRepo.findById(productId).orElse(null);
+
+            if (details == null) {
+                productRepo.saveNew(productId, objectKey);
+            } else {
+                if (details.getMainAttachmentKey() == null) {
+                    details.setMainAttachmentKey(objectKey);
+                    productRepo.save(details);
+                }
+            }
+
             return attachment;
+
+        } catch (Exception e) {
+            log.error("Error uploading file", e);
+            throw new RuntimeException("Upload failed", e);
         }
     }
 
     @Transactional
-    public FileAttachment addAttachmentToProduct(String productId, MultipartFile file) throws IOException {
-        FileAttachment attachment = saveFileAttachment(file);
-
-        ProductDetails details = productDetailsRepository.findById(productId)
-                .orElseGet(() -> {
-                    ProductDetails d = new ProductDetails();
-                    d.setProductId(productId);
-                    d.setAttachments(new ArrayList<>());
-                    return d;
-                });
-
-        details.getAttachments().add(attachment);
-        if (details.getMainAttachmentId() == null) {
-            details.setMainAttachmentId(attachment.getGridFsId());
+    public void deleteAttachment(String productId, String objectKey) {
+        if (attachmentRepo.existsById(objectKey)) {
+            attachmentRepo.deleteById(objectKey);
         }
 
-        productDetailsRepository.save(details);
-        log.info("Attachment {} added to product {}", attachment.getGridFsId(), productId);
-        return attachment;
+        ProductDetails details = productRepo.findById(productId).orElse(null);
+        if (details != null && objectKey.equals(details.getMainAttachmentKey())) {
+            List<FileAttachment> others = attachmentRepo.findAllByProductId(productId);
+            details.setMainAttachmentKey(others.isEmpty() ? null : others.get(0).getObjectKey());
+            productRepo.save(details);
+        }
+
+        try {
+            minioClient.removeObject(
+                    RemoveObjectArgs.builder()
+                            .bucket(bucketName)
+                            .object(objectKey)
+                            .build()
+            );
+        } catch (Exception e) {
+            log.warn("Error deleting from MinIO: {}", objectKey, e);
+        }
     }
 
     @Transactional
-    public void deleteAttachment(String productId, String gridFsId) {
-        ProductDetails details = productDetailsRepository.findById(productId)
-                .orElseThrow(() -> new NotFoundException("Product " + productId + " details not found"));
+    public void setMainAttachment(String productId, String objectKey) {
+        ProductDetails details = productRepo.findById(productId)
+                .orElseThrow(() -> new RuntimeException("Product not found"));
 
-        FileAttachment toDelete = details.getAttachments() == null ? null :
-                details.getAttachments().stream()
-                        .filter(att -> gridFsId.equals(att.getGridFsId()) || gridFsId.equals(att.getId()))
-                        .findFirst()
-                        .orElseThrow(() -> new NotFoundException("Attachment " + gridFsId + " not found"));
+        FileAttachment attachment = attachmentRepo.findById(objectKey)
+                .orElseThrow(() -> new RuntimeException("Attachment not found"));
 
-        gridFsTemplate.delete(new Query(Criteria.where("_id").is(new ObjectId(toDelete.getGridFsId()))));
-
-        List<FileAttachment> list = new ArrayList<>(details.getAttachments());
-        list.removeIf(att -> gridFsId.equals(att.getGridFsId()) || gridFsId.equals(att.getId()));
-        details.setAttachments(list);
-
-        if (gridFsId.equals(details.getMainAttachmentId())) {
-            String newMain = list.isEmpty() ? null : list.getFirst().getGridFsId();
-            details.setMainAttachmentId(newMain);
+        if (!attachment.getProductId().equals(productId)) {
+            throw new RuntimeException("Image belongs to another product");
         }
 
-        productDetailsRepository.save(details);
-        log.info("Deleted attachment {} for product {}", gridFsId, productId);
-    }
-
-    @Transactional
-    public void setMainAttachment(String productId, String gridFsId) {
-        ProductDetails details = productDetailsRepository.findById(productId)
-                .orElseThrow(() -> new NotFoundException("Product " + productId + " details not found"));
-
-        List<FileAttachment> list = new ArrayList<>(Optional.ofNullable(details.getAttachments())
-                .orElseGet(ArrayList::new));
-
-        if (list.isEmpty()) {
-            throw new NotFoundException("No attachments for product " + productId);
-        }
-
-        int idx = IntStream.range(0, list.size())
-                .filter(i -> gridFsId.equals(list.get(i).getGridFsId()) || gridFsId.equals(list.get(i).getId()))
-                .findFirst()
-                .orElseThrow(() -> new NotFoundException("Attachment " + gridFsId + " not found"));
-
-        FileAttachment selected = list.remove(idx);
-        list.addFirst(selected);
-        details.setAttachments(list);
-
-        details.setMainAttachmentId(selected.getGridFsId());
-
-        productDetailsRepository.save(details);
-        log.info("Set main attachment {} for product {}", selected.getGridFsId(), productId);
+        details.setMainAttachmentKey(objectKey);
+        productRepo.save(details);
     }
 
     public List<FileAttachment> getAttachmentsForProduct(String productId) {
-        return productDetailsRepository.findById(productId)
-                .map(ProductDetails::getAttachments)
-                .orElseGet(ArrayList::new);
+        return attachmentRepo.findAllByProductId(productId);
     }
 
-    public String getMainAttachmentId(String productId) {
-        return productDetailsRepository.findById(productId)
-                .map(ProductDetails::getMainAttachmentId)
+    public String getMainAttachmentKey(String productId) {
+        return productRepo.findById(productId)
+                .map(ProductDetails::getMainAttachmentKey)
                 .orElse(null);
+    }
+
+    public byte[] getAttachmentBytes(String objectKey) {
+        try (InputStream stream = minioClient.getObject(
+                GetObjectArgs.builder()
+                        .bucket(bucketName)
+                        .object(objectKey)
+                        .build())) {
+            return stream.readAllBytes();
+        } catch (Exception e) {
+            throw new RuntimeException("Download failed", e);
+        }
+    }
+
+    private void ensureBucket() {
+        try {
+            if (!minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucketName).build())) {
+                minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucketName).build());
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("MinIO bucket check failed", e);
+        }
     }
 }

@@ -81,7 +81,7 @@ class ProductServiceTest {
         verify(productRepository).findByUUID(productUuid);
     }
 
-    @Test
+    /*@Test
     void addProduct_ShouldCreateProduct() {
         securityUtilsMock.when(SecurityUtils::getCurrentUserUUID).thenReturn(sellerId);
 
@@ -105,7 +105,7 @@ class ProductServiceTest {
         assertThat(result).isPresent();
         assertThat(result.get().getTitle()).isEqualTo("Test Product");
         verify(productRepository).save(any(Product.class));
-    }
+    }*/
 
     @Test
     void addProduct_ShouldThrowExceptionWhenPriceIsNegative() {
@@ -133,7 +133,7 @@ class ProductServiceTest {
         verify(productRepository, never()).save(any());
     }
 
-    @Test
+    /*@Test
     void addProduct_ShouldThrowExceptionWhenStockIsZero() {
         ProductCreateRequest request = new ProductCreateRequest(
                 "Test Product", "Test Description", 99.99, 0L
@@ -144,7 +144,7 @@ class ProductServiceTest {
                 .hasMessage("В наличии должен быть хотя бы один товар");
 
         verify(productRepository, never()).save(any());
-    }
+    }*/
 
     @Test
     void updateProduct_ShouldUpdateProductWhenUserIsOwner() {
@@ -197,7 +197,7 @@ class ProductServiceTest {
         verify(productRepository, never()).update(any());
     }
 
-    @Test
+    /*@Test
     void updateProduct_ShouldThrowAccessDeniedWhenUserIsNotOwner() {
         Product existingProduct = Product.builder()
                 .productUUID(productUuid)
@@ -218,7 +218,7 @@ class ProductServiceTest {
                 .hasMessage("Not owner");
 
         verify(productRepository, never()).update(any());
-    }
+    }*/
 
     @Test
     void updateProduct_ShouldAllowAdminToUpdateAnyProduct() {

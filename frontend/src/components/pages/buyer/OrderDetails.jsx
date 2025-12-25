@@ -55,8 +55,8 @@ export default function OrderDetails() {
                 try {
                     const list = await getProductAttachments(pid);
                     const first = Array.isArray(list) && list.length ? list[0] : null;
-                    const attId = first ? (first.gridFsId || first.id || first) : null;
-                    const url = attId ? `${PRODUCTS_API}/products/${attId}/attachments-fs` : null;
+                    const key = first ? (first.objectKey || first.key) : null;
+                    const url = key ? `${PRODUCTS_API}/products/attachments/download?key=${encodeURIComponent(key)}` : null;
                     return [pid, url];
                 } catch {
                     return [pid, null];
@@ -71,7 +71,7 @@ export default function OrderDetails() {
         })();
 
         return () => { cancelled = true; };
-    }, [order, imgByProduct]);
+    }, [order]);
 
     const canPay = ['NEW','PENDING_PAYMENT'].includes((order?.status || '').toUpperCase());
 
