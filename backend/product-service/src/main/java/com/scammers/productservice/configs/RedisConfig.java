@@ -103,16 +103,6 @@ public class RedisConfig implements CachingConfigurer {
     }
 
     @Bean
-    public CircuitBreakerRegistry circuitBreakerRegistry() {
-        CircuitBreakerConfig config = CircuitBreakerConfig.custom()
-                .failureRateThreshold(50)
-                .slidingWindowSize(20)
-                .waitDurationInOpenState(Duration.ofSeconds(5))
-                .build();
-        return CircuitBreakerRegistry.of(config);
-    }
-
-    @Bean
     public CircuitBreaker redisCircuitBreaker(CircuitBreakerRegistry registry) {
         return registry.circuitBreaker("redisCB");
     }

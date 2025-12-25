@@ -20,6 +20,6 @@ public class RatingController {
     public ResponseEntity<RatingResponse> getRating(@PathVariable UUID productId) {
         return ratingsAggregator.getRatingProjection(productId)
                 .map(projection -> ResponseEntity.ok(new RatingResponse(projection)))
-                .orElse(ResponseEntity.notFound().build());
+                .orElse(ResponseEntity.ok(RatingResponse.empty()));
     }
 }

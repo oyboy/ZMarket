@@ -21,6 +21,7 @@ public class SecurityConfig {
         return http
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/userservice/api/v1/users/register").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/userservice/api/v1/users/{user-id}/seller-info").permitAll()
                         .requestMatchers(HttpMethod.GET, "/revaggservice/api/v1/ratings/{productId}").permitAll()
                         .requestMatchers(HttpMethod.GET, "/productservice/api/v1/products/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/productservice/api/v1/categories/**").permitAll()
