@@ -59,13 +59,13 @@ public class ProductService {
         }
 
         Product product = Product.builder()
+                .productUUID(productId)
                 .title(request.title())
                 .description(request.description())
                 .price(request.price())
                 .stock(request.stock())
                 .categoryId(request.categoryId())
                 .attributes(request.attributes() != null ? request.attributes() : new HashMap<>())
-                .productUUID(UUID.randomUUID())
                 .sellerId(sellerId)
                 .build();
 
