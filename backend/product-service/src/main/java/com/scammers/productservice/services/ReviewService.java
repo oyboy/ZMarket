@@ -18,10 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -36,22 +33,38 @@ public class ReviewService {
     public Review saveReviewOnProduct(UUID productUUID, UUID userUUID, ReviewCreateRequest request) {
         short rating = request.mark();
         String text = request.text();
+
         if (rating < 1 || rating > 5) throw new IllegalArgumentException("Invalid rating");
 
         UUID sellerUUID = productRepository.getSellerUUID(productUUID);
         if (sellerUUID.equals(userUUID)) throw new AccessDeniedException("Вы не можете оценивать свой товар");
 
-        Review r = repository.findReviewByProductAndUser(productUUID, userUUID)
-                .orElseGet(() -> {
-                    Review nr = new Review();
-                    nr.setUserUUID(userUUID);
-                    nr.setProductUUID(productUUID);
-                    nr.setRating(rating);
-                    nr.setCreatedAt(Instant.now());
-                    nr.setComment(text);
-                    return nr;
-                });
-        Short oldRating = r.getId() == null ? null : r.getRating();
+        Optional<Review> existingOpt = repository.findReviewByProductAndUser(productUUID, userUUID);
+
+        Review r;
+        boolean isNew = false;
+        Short oldRating = null;
+        String oldComment = null;
+
+        if (existingOpt.isPresent()) {
+            r = existingOpt.get();
+            oldRating = r.getRating();
+            oldComment = r.getComment();
+        } else {
+            isNew = true;
+            r = new Review();
+            r.setUserUUID(userUUID);
+            r.setProductUUID(productUUID);
+            r.setCreatedAt(Instant.now());
+        }
+
+        boolean ratingChanged = !isNew && !oldRating.equals(rating);
+        boolean textChanged = !isNew && !Objects.equals(oldComment, text);
+
+        if (!isNew && !ratingChanged && !textChanged) {
+            return r;
+        }
+
         r.setRating(rating);
         r.setComment(text);
         r.setReviewStatus(ReviewStatus.PENDING_PUB);
@@ -59,62 +72,70 @@ public class ReviewService {
 
         Review saved = repository.save(r);
 
-        EventType type;
         Map<String, Object> payload = new HashMap<>();
         payload.put("eventId", UUID.randomUUID().toString());
         payload.put("productId", productUUID.toString());
         payload.put("reviewId", saved.getId().toString());
         payload.put("userId", userUUID.toString());
-        payload.put("reviewPendingStatus",  ReviewStatus.PENDING_PUB.name());
+        payload.put("reviewPendingStatus", ReviewStatus.PENDING_PUB.name());
         payload.put("timestamp", Instant.now().toString());
 
-        if (oldRating == null) {
+        EventType type;
+
+        if (isNew) {
             type = EventType.CREATED;
             payload.put("rating", rating);
-        } else if (!oldRating.equals(rating)) {
+        } else {
             type = EventType.UPDATED;
             payload.put("oldRating", oldRating);
             payload.put("newRating", rating);
-        } else {
-            type = EventType.UNTOUCHED;
         }
-        if (type !=  EventType.UNTOUCHED) {
-            try {
-                outboxRepo.save(OutboxEvent.of(productUUID, type, om.writeValueAsString(payload)));
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException(e);
-            }
+
+        try {
+            outboxRepo.save(OutboxEvent.of(productUUID, type, om.writeValueAsString(payload)));
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
         }
+
         return saved;
     }
 
     @Transactional
-    public void deleteReviewOnProduct(UUID reviewUUID, UUID productUUID, UUID userUUID) {
+    public void initiateDeleteReview(UUID productUUID, UUID userUUID, boolean isAdmin) {
         Review r = repository.findReviewByProductAndUser(productUUID, userUUID)
-                .orElseThrow(() -> new NotFoundException("Review not found"));
-        if (!r.getProductUUID().equals(productUUID)) throw new IllegalArgumentException("mismatch product uuid");
-        if (!r.getUserUUID().equals(userUUID)) throw new AccessDeniedException("not owner");
+                .orElseThrow(() -> new NotFoundException("Review not found for this product and user"));
+        if (!r.getUserUUID().equals(userUUID) && !isAdmin) {
+            throw new AccessDeniedException("Не владелец отзыва");
+        }
+
+        if (r.getReviewStatus() == ReviewStatus.PENDING_DEL || r.getReviewStatus() == ReviewStatus.DELETED) {
+            return;
+        }
 
         r.setReviewStatus(ReviewStatus.PENDING_DEL);
         r.setUpdatedAt(Instant.now());
-        repository.save(r);
+        Review saved = repository.save(r);
 
         Map<String, Object> payload = Map.of(
                 "eventId", UUID.randomUUID().toString(),
-                "productId", productUUID.toString(),
-                "reviewId", reviewUUID.toString(),
-                "userId", userUUID.toString(),
+                "productId", r.getProductUUID().toString(),
+                "reviewId", saved.getId(),
+                "userId", r.getUserUUID().toString(),
                 "rating", r.getRating(),
-                "reviewPendingStatus",  ReviewStatus.PENDING_DEL.name(),
+                "reviewPendingStatus", ReviewStatus.PENDING_DEL.name(),
                 "timestamp", Instant.now().toString()
         );
+
         try {
-            outboxRepo.save(OutboxEvent.of(productUUID, EventType.DELETED, om.writeValueAsString(payload)));
+            outboxRepo.save(OutboxEvent.of(
+                    productUUID,
+                    EventType.DELETED,
+                    om.writeValueAsString(payload)
+            ));
         } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Error creating outbox event", e);
         }
     }
-
     public List<ShowReview> getReviewsForProduct(UUID productUUID, int limit, int offset) {
         return repository.findReviewsForProduct(productUUID, limit, offset);
     }

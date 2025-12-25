@@ -37,12 +37,13 @@ public class ProductController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Product>> findAllPaginated(@RequestParam(value = "page", defaultValue = "0") int page,
-                                                          @RequestParam(value = "size", defaultValue = "20") int size,
-                                                          @RequestParam(value = "order", defaultValue = "id") String orderBy
+    public ResponseEntity<List<Product>> findAllPaginated(
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "20") int size,
+            @RequestParam(value = "order", defaultValue = "id") String orderBy,
+            @RequestParam(value = "categoryId", required = false) Long categoryId
     ) {
-        Page<Product> resultPage = service.findPaginated(page, size, orderBy);
-
+        Page<Product> resultPage = service.findPaginated(page, size, orderBy, categoryId);
         return ResponseEntity.ok(resultPage.getContent());
     }
 

@@ -6,6 +6,7 @@ import com.scammers.productservice.models.responses.RatingResponse;
 import com.scammers.productservice.services.ReviewService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
@@ -30,13 +31,20 @@ public class ReviewController {
         return ResponseEntity.accepted().build();
     }
 
-    @DeleteMapping("/{review_id}")
+    @DeleteMapping
     public ResponseEntity<Void> deleteReview(@PathVariable("product_uuid") UUID productUUID,
-                                             @AuthenticationPrincipal Jwt jwt,
-                                             @PathVariable("review_id") UUID reviewUUID
+                                             @AuthenticationPrincipal Jwt jwt
     ) {
-        UUID  userId = UUID.fromString(jwt.getSubject());
-        service.deleteReviewOnProduct(reviewUUID, productUUID, userId);
+        UUID userId = UUID.fromString(jwt.getSubject());
+        service.initiateDeleteReview(productUUID, userId, false);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/{user_id}")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<Void> deleteSomeoneReview(@PathVariable("product_uuid") UUID productUUID,
+                                                    @PathVariable("user_id") UUID targetUserUUID) {
+        service.initiateDeleteReview(productUUID, targetUserUUID, true);
         return ResponseEntity.ok().build();
     }
 

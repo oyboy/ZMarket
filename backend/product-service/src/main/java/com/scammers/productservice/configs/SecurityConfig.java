@@ -29,11 +29,13 @@ public class SecurityConfig {
         http
                 .csrf().disable()
                 .authorizeHttpRequests(authz -> authz
+                        .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/products/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/ratings/**").permitAll()
 
                         .requestMatchers(HttpMethod.POST, "/api/v1/products/{product_uuid}/reviews").authenticated()
-                        .requestMatchers(HttpMethod.DELETE, "/api/v1/products/{product_uuid}/reviews/{review_id}").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/products/{product_uuid}/reviews/**").authenticated()
 
                         .requestMatchers(HttpMethod.POST, "/api/v1/products/**").hasAnyAuthority("SELLER", "ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/products/**").hasAnyAuthority("SELLER", "ADMIN")

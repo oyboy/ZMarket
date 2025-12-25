@@ -30,7 +30,7 @@ public class ReviewRepository {
     private final ReviewRowMapper reviewRowMapper;
 
     public Optional<Review> findReviewByProductAndUser(UUID productUUID, UUID userUUID) {
-        String command = "SELECT * FROM product_reviews WHERE product_id = ? AND user_id = ?";
+        String command = "SELECT * FROM product_reviews WHERE product_id = ? AND user_id = ? AND status != 'DELETED'";
         List<Review> products = jdbcTemplate.query(command, reviewRowMapper, productUUID, userUUID);
         return Optional.ofNullable(DataAccessUtils.singleResult(products));
     }

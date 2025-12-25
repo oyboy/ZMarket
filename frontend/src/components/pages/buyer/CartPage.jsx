@@ -4,6 +4,7 @@ import { formatPrice } from '../../../utils/format';
 import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '../../Shared/ToastProvider';
 import { createOrder } from '../../../services/orders';
+import { getProductAttachments, PRODUCTS_API } from '../../../services/products';
 
 export default function CartPage({ onRequireAuth }) {
     const toast = useToast();
@@ -17,6 +18,8 @@ export default function CartPage({ onRequireAuth }) {
     const [checkoutOpen, setCheckoutOpen] = useState(false);
     const [addr, setAddr] = useState('');
     const [creating, setCreating] = useState(false);
+
+    const [imgByProduct, setImgByProduct] = useState({});
 
     const load = async () => {
         setLoading(true);
@@ -42,6 +45,38 @@ export default function CartPage({ onRequireAuth }) {
         load();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [token]);
+
+    // Fallback для изображений по новым ключам (objectKey)
+    useEffect(() => {
+        const ids = new Set();
+        (cart.cartItems || []).forEach(it => {
+            if (!it?.imageUrl && it?.productId && !imgByProduct[it.productId]) ids.add(it.productId);
+        });
+        if (ids.size === 0) return;
+
+        let cancelled = false;
+        (async () => {
+            const entries = await Promise.all([...ids].map(async (pid) => {
+                try {
+                    const list = await getProductAttachments(pid);
+                    const first = Array.isArray(list) && list.length ? list[0] : null;
+                    const key = first ? (first.objectKey || first.key) : null;
+                    const url = key ? `${PRODUCTS_API}/products/attachments/download?key=${encodeURIComponent(key)}` : null;
+                    return [pid, url];
+                } catch {
+                    return [pid, null];
+                }
+            }));
+            if (cancelled) return;
+            setImgByProduct(prev => {
+                const next = { ...prev };
+                entries.forEach(([pid, url]) => { if (url) next[pid] = url; });
+                return next;
+            });
+        })();
+
+        return () => { cancelled = true; };
+    }, [cart]);
 
     const onAddOne = async (pId) => {
         try {
@@ -103,8 +138,8 @@ export default function CartPage({ onRequireAuth }) {
                     <div className="divide-y border rounded-lg">
                         {cart.cartItems.map((it) => (
                             <div key={it.productId} className="p-3 flex items-center gap-4">
-                                {it.imageUrl ? (
-                                    <img src={it.imageUrl} alt="" className="w-16 h-16 object-cover rounded" />
+                                {(it.imageUrl || imgByProduct[it.productId]) ? (
+                                    <img src={it.imageUrl || imgByProduct[it.productId]} alt="" className="w-16 h-16 object-cover rounded" />
                                 ) : (
                                     <div className="w-16 h-16 bg-gray-200 rounded" />
                                 )}

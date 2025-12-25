@@ -1,5 +1,6 @@
 package com.scammers.userservice.services;
 
+import com.scammers.commonresilience.Resilient;
 import com.scammers.userservice.exceptions.KeycloakOperationException;
 import com.scammers.userservice.exceptions.UserAlreadyExistsException;
 import com.scammers.userservice.models.BuyerProfile;
@@ -31,6 +32,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Resilient("user-service")
 public class KeycloakUserService {
     @Value("${keycloak.realm}")
     private String realm;

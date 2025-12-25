@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
+import java.util.Map;
 import java.util.UUID;
 
 @Data
@@ -20,4 +21,6 @@ public class Product implements Serializable {
     private String description;
     private Double price;
     private Long stock;
+    private Long categoryId;
+    private Map<String, Object> attributes;
 }

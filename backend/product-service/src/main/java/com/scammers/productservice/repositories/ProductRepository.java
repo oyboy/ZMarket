@@ -1,26 +1,31 @@
 package com.scammers.productservice.repositories;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.scammers.productservice.components.ProductRowMapper;
+import com.scammers.productservice.configs.ObjectMapperFactory;
 import com.scammers.productservice.models.Product;
 import lombok.RequiredArgsConstructor;
+import org.postgresql.util.PGobject;
 import org.springframework.dao.support.DataAccessUtils;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.sql.SQLException;
+import java.util.*;
 
 @Repository
 @RequiredArgsConstructor
 public class ProductRepository {
     private final JdbcTemplate jdbcTemplate;
     private final ProductRowMapper  productRowMapper;
+    private final ObjectMapper objectMapper = ObjectMapperFactory.create();
 
     public Product save(Product product) {
         if (findByUUID(product.getProductUUID()) == null) {
-            String command = "INSERT INTO products (product_uuid, seller_id, title, description, price, stock) " +
-                    "VALUES (?,?,?,?,?,?)";
+            String command = "INSERT INTO products (product_uuid, seller_id, title, description, price, stock, category_id, attributes) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+
             jdbcTemplate.update(
                     command,
                     product.getProductUUID(),
@@ -28,30 +33,59 @@ public class ProductRepository {
                     product.getTitle(),
                     product.getDescription(),
                     product.getPrice(),
-                    product.getStock()
+                    product.getStock(),
+                    product.getCategoryId(),
+                    mapToJson(product.getAttributes())
             );
         }
         return findByUUID(product.getProductUUID());
     }
+
     public Product update(Product product) {
-        String command = "UPDATE products SET title = ?, description = ?, price = ? " +
+        String command = "UPDATE products SET title = ?, description = ?, price = ?, category_id = ?, attributes = ? " +
                 "WHERE product_uuid = ?";
+
         jdbcTemplate.update(
                 command,
                 product.getTitle(),
                 product.getDescription(),
                 product.getPrice(),
+                product.getCategoryId(),
+                mapToJson(product.getAttributes()),
                 product.getProductUUID()
         );
         return findByUUID(product.getProductUUID());
     }
 
-    public List<Product> findByOffsetSize(int offset, int size, String orderBy) {
+    public List<Product> findByOffsetSize(int offset, int size, String orderBy, Long categoryId) {
         String safeOrderBy = validateOrderBy(orderBy);
 
-        String sql = String.format("SELECT * FROM products ORDER BY %s LIMIT ? OFFSET ?", safeOrderBy);
+        StringBuilder sql = new StringBuilder("SELECT * FROM products");
+        List<Object> params = new ArrayList<>();
 
-        return jdbcTemplate.query(sql, productRowMapper, size, offset);
+        if (categoryId != null) {
+            sql.append(" WHERE category_id = ?");
+            params.add(categoryId);
+        }
+
+        sql.append(" ORDER BY ").append(safeOrderBy);
+        sql.append(" LIMIT ? OFFSET ?");
+
+        params.add(size);
+        params.add(offset);
+
+        return jdbcTemplate.query(sql.toString(), productRowMapper, params.toArray());
+    }
+
+    private PGobject mapToJson(Map<String, Object> attributes) {
+        try {
+            PGobject jsonObject = new PGobject();
+            jsonObject.setType("jsonb");
+            jsonObject.setValue(objectMapper.writeValueAsString(attributes));
+            return jsonObject;
+        } catch (SQLException | JsonProcessingException e) {
+            throw new RuntimeException("Error converting attributes to JSON", e);
+        }
     }
 
     private String validateOrderBy(String orderBy) {
@@ -73,9 +107,17 @@ public class ProductRepository {
 
         return result;
     }
-    public Long getTotalCountOfProducts() {
-        String command = "SELECT COUNT(*) FROM products";
-        return jdbcTemplate.queryForObject(command, Long.class);
+
+    public Long getTotalCountOfProducts(Long categoryId) {
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM products");
+        List<Object> params = new ArrayList<>();
+
+        if (categoryId != null) {
+            sql.append(" WHERE category_id = ?");
+            params.add(categoryId);
+        }
+
+        return jdbcTemplate.queryForObject(sql.toString(), Long.class, params.toArray());
     }
 
     public Product findById(Long id) {

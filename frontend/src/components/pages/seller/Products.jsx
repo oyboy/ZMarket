@@ -19,7 +19,6 @@ const Products = () => {
     const [formData, setFormData] = useState({ title:'', description:'', price:0, stock:0 });
     const [imageFile, setImageFile] = useState(null);
 
-    // склад
     const [stockById, setStockById] = useState({});
     const [stockLoading, setStockLoading] = useState(false);
 
@@ -87,53 +86,50 @@ const Products = () => {
         setFormData(prev => ({ ...prev, [name]: name === 'price' || name === 'stock' ? Number(value) : value }));
     };
 
+    // НОВЫЕ эндпоинты: upload -> возвращаем objectKey, setMain/delete работают через ?key=
     const uploadImage = async (productUUID, file) => {
         const form = new FormData();
         form.append('file', file);
+
         const res = await fetch(`${PRODUCTS_API}/products/${productUUID}/attachments`, {
             method: 'POST',
             headers: authHeaders,
             body: form,
         });
-        const contentType = res.headers.get('content-type') || '';
+
         if (!res.ok) throw new Error(await res.text().catch(() => 'Upload failed'));
 
-        let fileId = null;
-        if (contentType.includes('application/json')) {
+        let objectKey = null;
+        const ct = res.headers.get('content-type') || '';
+        if (ct.includes('application/json')) {
             try {
                 const payload = await res.json();
-                fileId = payload?.gridFsId || payload?.id || null;
+                objectKey = payload?.objectKey || payload?.key || null;
             } catch {}
         }
-        if (!fileId) {
+
+        if (!objectKey) {
             try {
                 const listRes = await fetch(`${PRODUCTS_API}/products/${productUUID}/attachments`, { headers: authHeaders });
                 if (listRes.ok) {
                     const list = await listRes.json();
-                    const found = Array.isArray(list) ? list.find(a => a?.fileName === file.name) : null;
-                    fileId = found?.gridFsId || found?.id || null;
-                    if (!fileId && Array.isArray(list) && list.length) {
-                        fileId = list[0]?.gridFsId || list[0]?.id || null;
-                    }
+                    const first = Array.isArray(list) && list.length ? list[0] : null;
+                    objectKey = first?.objectKey || first?.key || null;
                 }
             } catch {}
         }
-        return fileId;
+        return objectKey;
     };
 
-    const setMainAttachment = async (productUUID, attachmentId) => {
-        const res = await fetch(`${PRODUCTS_API}/products/${productUUID}/attachments/${attachmentId}/main`, {
-            method: 'POST',
-            headers: authHeaders,
-        });
+    const setMainAttachment = async (productUUID, objectKey) => {
+        const url = `${PRODUCTS_API}/products/${productUUID}/attachments/main?key=${encodeURIComponent(objectKey)}`;
+        const res = await fetch(url, { method: 'POST', headers: authHeaders });
         if (!res.ok) throw new Error(await res.text().catch(() => 'Set main failed'));
     };
 
-    const deleteAttachment = async (productUUID, attachmentId) => {
-        const res = await fetch(`${PRODUCTS_API}/products/${productUUID}/attachments/${attachmentId}`, {
-            method: 'DELETE',
-            headers: authHeaders,
-        });
+    const deleteAttachment = async (productUUID, objectKey) => {
+        const url = `${PRODUCTS_API}/products/${productUUID}/attachments?key=${encodeURIComponent(objectKey)}`;
+        const res = await fetch(url, { method: 'DELETE', headers: authHeaders });
         if (!res.ok) throw new Error(await res.text().catch(() => 'Delete failed'));
     };
 
@@ -148,8 +144,8 @@ const Products = () => {
             const productUUID = isEdit ? currentProduct.productUUID : saved?.productUUID;
 
             if (imageFile && productUUID) {
-                const newId = await uploadImage(productUUID, imageFile);
-                if (newId) await setMainAttachment(productUUID, newId);
+                const key = await uploadImage(productUUID, imageFile);
+                if (key) await setMainAttachment(productUUID, key);
             }
 
             setShowModal(false);
@@ -162,11 +158,11 @@ const Products = () => {
         }
     };
 
-    // карточка: загрузка/установка/удаление фото
+    // карточка: загрузка/установка/удаление фото (используем objectKey)
     const handleUploadFromCard = async (product, file) => {
         try {
-            const id = await uploadImage(product.productUUID || product.id, file);
-            if (id) await setMainAttachment(product.productUUID || product.id, id);
+            const key = await uploadImage(product.productUUID || product.id, file);
+            if (key) await setMainAttachment(product.productUUID || product.id, key);
             await loadMine();
             toast.success('Фото загружено');
         } catch (e) {
@@ -175,18 +171,18 @@ const Products = () => {
         }
     };
 
-    const handleSetMainFromCard = async (product, attachmentId) => {
+    const handleSetMainFromCard = async (product, objectKey) => {
         try {
-            await setMainAttachment(product.productUUID || product.id, attachmentId);
+            await setMainAttachment(product.productUUID || product.id, objectKey);
             await loadMine();
         } catch (e) {
             toast.error('Не удалось установить превью');
         }
     };
 
-    const handleDeleteFromCard = async (product, attachmentId) => {
+    const handleDeleteFromCard = async (product, objectKey) => {
         try {
-            await deleteAttachment(product.productUUID || product.id, attachmentId);
+            await deleteAttachment(product.productUUID || product.id, objectKey);
             await loadMine();
         } catch (e) {
             toast.error('Не удалось удалить изображение');
@@ -349,7 +345,6 @@ function StockModal({
                         <div>Резерв: <span className="font-medium">{reserved}</span></div>
                     </div>
 
-                    {/* Блок 1: Пополнить/Уменьшить */}
                     <div className="space-y-2">
                         <div className="flex items-center gap-2">
                             <Toggle active={mode==='add'} onClick={() => onModeChange('add')}>Пополнить</Toggle>
@@ -380,7 +375,6 @@ function StockModal({
 
                     <hr className="border-gray-200" />
 
-                    {/* Блок 2: Установить остаток */}
                     <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end">
                         <div>
                             <label className="block text-sm text-gray-600 mb-1">Установить остаток (шт)</label>

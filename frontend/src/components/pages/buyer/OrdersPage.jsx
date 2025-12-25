@@ -59,8 +59,8 @@ export default function OrdersPage({ onRequireAuth }) {
                 try {
                     const list = await getProductAttachments(pid);
                     const first = Array.isArray(list) && list.length ? list[0] : null;
-                    const attId = first ? (first.gridFsId || first.id || first) : null;
-                    const url = attId ? `${PRODUCTS_API}/products/${attId}/attachments-fs` : null;
+                    const key = first ? (first.objectKey || first.key) : null;
+                    const url = key ? `${PRODUCTS_API}/products/attachments/download?key=${encodeURIComponent(key)}` : null;
                     return [pid, url];
                 } catch {
                     return [pid, null];
@@ -73,8 +73,9 @@ export default function OrdersPage({ onRequireAuth }) {
                 return next;
             });
         })();
+
         return () => { cancelled = true; };
-    }, [orders, imgByProduct]);
+    }, [orders]);
 
     const filtered = useMemo(() => {
         const t = (status || 'ALL').toUpperCase();
@@ -166,7 +167,6 @@ export default function OrdersPage({ onRequireAuth }) {
                 ) : (
                     filtered.map(o => {
                         const created = o.createdAt ? new Date(o.createdAt) : null;
-                        const expires = o.expiresAt ? new Date(o.expiresAt) : null;
                         const canPay = ['NEW','PENDING','PENDING_PAYMENT'].includes((o.status || '').toUpperCase());
                         return (
                             <div key={o.id} className="p-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4 border-b last:border-b-0">
