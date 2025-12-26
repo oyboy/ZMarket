@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import StarRating from '../Shared/StarRating';
 import StarInput from '../Shared/StarInput';
+import { useToast } from '../Shared/ToastProvider';
 import { formatPrice } from '../../utils/format';
 import { getProductById, getProductAttachments, PRODUCTS_API } from '../../services/products';
 import {
@@ -13,6 +14,7 @@ import {
 } from '../../services/reviews';
 import { getRolesFromToken } from '../../utils/jwt';
 import { getSellerInfo } from '../../services/users';
+import {addToCart} from "../../services/cart";
 
 const Bar = ({ label, value, total }) => {
     const pct = total > 0 ? Math.round((value * 100) / total) : 0;
@@ -277,13 +279,17 @@ const ProductDetails = ({ onRequireAuth }) => {
             // игнорируем
         }
     };
-
-    const handleBuy = () => {
-        if (!token) {
-            requireAuth();
-            return;
+    const productId = useMemo(() => product?.productUUID || product?.id || null, [product]);
+    const toast = useToast();
+    const handleAddToCart = async () => {
+        const token = localStorage.getItem('jwtToken');
+        if (!token) { requireAuth(); return; }
+        try {
+            await addToCart(productId, 1);
+            toast.success('Добавлено в корзину');
+        } catch (e) {
+            toast.error(e.message || 'Не удалось добавить в корзину');
         }
-        // TODO: логика покупки / добавления в корзину
     };
 
     const handleDeleteReview = async (rv) => {
@@ -540,10 +546,10 @@ const ProductDetails = ({ onRequireAuth }) => {
                     <div className="mt-6 flex items-center gap-3">
                         {isUser && (
                             <button
-                                onClick={handleBuy}
-                                className="px-5 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white"
+                                onClick={handleAddToCart}
+                                className="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-blue-600 hover:bg-blue-700 text-white"
                             >
-                                Купить
+                                В корзину
                             </button>
                         )}
                         <button

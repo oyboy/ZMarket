@@ -6,28 +6,26 @@ import ProductDetails from './components/Productservice/ProductDetails';
 
 import SellerDashboard from './components/pages/seller/Dashboard';
 import Products from './components/pages/seller/Products';
+import WarehouseMovements from './components/pages/seller/WarehouseMovements';
+import SellerOrders from './components/pages/seller/SellerOrders';
 
 import AdminDashboard from './components/pages/admin/Dashboard';
 import AdminPendingSellers from './components/pages/admin/PendingSellers';
 import AdminRejectedSellers from './components/pages/admin/RejectedSellers';
-import AdminCategories from "./components/pages/admin/AdminCategories";
+import AdminCategories from './components/pages/admin/AdminCategories';
+
+import CartPage from './components/pages/buyer/CartPage';
+import OrdersPage from './components/pages/buyer/OrdersPage';
+import OrderDetails from './components/pages/buyer/OrderDetails';
 
 import RequireRole from './components/Productservice/Auth/RequireRole';
 import Header from './components/Productservice/Header';
+import Footer from './components/Productservice/Footer';
 import LoginModal from './components/Productservice/LoginModal';
 import RegisterModal from './components/Productservice/Auth/RegisterModal';
 import BecomeSellerModal from './components/Userservice/BecomeSellerModal';
 
-import CartPage from './components/pages/buyer/CartPage';
-
 import { getRolesFromToken } from './utils/jwt';
-
-import WarehouseMovements from './components/pages/seller/WarehouseMovements';
-
-import OrdersPage from './components/pages/buyer/OrdersPage';
-import OrderDetails from './components/pages/buyer/OrderDetails';
-import SellerOrders from './components/pages/seller/SellerOrders';
-
 import {
     TOKEN_URL,
     CLIENT_ID,
@@ -35,12 +33,18 @@ import {
     logout,
     scheduleAutoRefresh,
 } from './services/http';
-import {ToastProvider} from "./components/Shared/ToastProvider";
+import { ToastProvider } from './components/Shared/ToastProvider';
+
+const SimpleWaveBackground = () => (
+    <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-purple-50 opacity-70" />
+        <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-blue-100/30 to-transparent" />
+    </div>
+);
 
 export default function App() {
     const [token, setToken] = useState(localStorage.getItem('jwtToken') || null);
 
-    // modals
     const [showLoginModal, setShowLoginModal] = useState(false);
     const [loginData, setLoginData] = useState({ username: '', password: '' });
     const [loginLoading, setLoginLoading] = useState(false);
@@ -51,7 +55,6 @@ export default function App() {
     const navigate = useNavigate();
     const location = useLocation();
 
-    // INIT: auto-refresh + redirect by role (только для корня)
     useEffect(() => {
         const t = localStorage.getItem('jwtToken');
         if (!t) return;
@@ -61,15 +64,15 @@ export default function App() {
         if (location.pathname === '/' || location.pathname === '/index.html') {
             const roles = getRolesFromToken(t);
 
-            if (roles.includes('ADMIN') || roles.includes('ROLE_ADMIN'))
+            if (roles.includes('ADMIN') || roles.includes('ROLE_ADMIN')) {
                 navigate('/admin', { replace: true });
-            else if (roles.includes('SELLER') || roles.includes('ROLE_SELLER'))
+            } else if (roles.includes('SELLER') || roles.includes('ROLE_SELLER')) {
                 navigate('/seller', { replace: true });
+            }
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // LOGIN
     const handleLogin = async () => {
         if (!loginData.username || !loginData.password) return;
 
@@ -103,11 +106,13 @@ export default function App() {
 
             const roles = getRolesFromToken(data.access_token);
 
-            if (roles.includes('ADMIN') || roles.includes('ROLE_ADMIN'))
+            if (roles.includes('ADMIN') || roles.includes('ROLE_ADMIN')) {
                 navigate('/admin', { replace: true });
-            else if (roles.includes('SELLER') || roles.includes('ROLE_SELLER'))
+            } else if (roles.includes('SELLER') || roles.includes('ROLE_SELLER')) {
                 navigate('/seller', { replace: true });
-            else navigate('/', { replace: true });
+            } else {
+                navigate('/', { replace: true });
+            }
         } catch (e) {
             alert(e.message || 'Ошибка входа');
         } finally {
@@ -115,7 +120,6 @@ export default function App() {
         }
     };
 
-    // AUTO LOGIN AFTER REGISTER
     const handleLoginWith = async (username, password) => {
         setLoginLoading(true);
         try {
@@ -162,90 +166,111 @@ export default function App() {
 
     return (
         <ToastProvider>
-            <Header
-                token={token}
-                onLogout={onLogout}
-                onOpenLogin={openLogin}
-                onOpenRegister={openRegister}
-                onOpenBecomeSeller={openBecomeSeller}
-            />
+            <div className="min-h-screen flex flex-col bg-gradient-to-b from-blue-50 to-white">
+                <SimpleWaveBackground />
 
-            <Routes>
-                {/* PUBLIC */}
-                <Route
-                    path="/"
-                    element={<Marketplace token={token} onRequireAuth={openLogin} />}
-                />
-                <Route
-                    path="/product/:uuid"
-                    element={<ProductDetails onRequireAuth={openLogin} />}
+                <Header
+                    token={token}
+                    onLogout={onLogout}
+                    onOpenLogin={openLogin}
+                    onOpenRegister={openRegister}
+                    onOpenBecomeSeller={openBecomeSeller}
                 />
 
-                {/* CART */}
-                <Route path="/cart" element={<CartPage onRequireAuth={openLogin} />} />
+                <main className="flex-1 relative z-10">
+                    <Routes>
+                        <Route
+                            path="/"
+                            element={<Marketplace token={token} onRequireAuth={openLogin} />}
+                        />
+                        <Route
+                            path="/product/:uuid"
+                            element={<ProductDetails onRequireAuth={openLogin} />}
+                        />
 
-                {/*Orders*/}
-                <Route path="/orders" element={<OrdersPage onRequireAuth={openLogin} />} />
-                <Route path="/orders/:orderId" element={<OrderDetails />} />
+                        <Route
+                            path="/cart"
+                            element={<CartPage onRequireAuth={openLogin} />}
+                        />
 
-                {/* SELLER */}
-                <Route
-                    element={
-                        <RequireRole anyOf={['SELLER', 'ROLE_SELLER', 'ADMIN', 'ROLE_ADMIN']} />
+                        <Route
+                            path="/orders"
+                            element={<OrdersPage onRequireAuth={openLogin} />}
+                        />
+                        <Route
+                            path="/orders/:orderId"
+                            element={<OrderDetails />}
+                        />
+
+                        <Route
+                            element={
+                                <RequireRole anyOf={['SELLER', 'ROLE_SELLER', 'ADMIN', 'ROLE_ADMIN']} />
+                            }
+                        >
+                            <Route path="/seller" element={<SellerDashboard />} />
+                            <Route path="/seller/products" element={<Products />} />
+                            <Route path="/seller/warehouse" element={<WarehouseMovements />} />
+                            <Route path="/seller/orders" element={<SellerOrders />} />
+                        </Route>
+
+                        <Route element={<RequireRole anyOf={['ADMIN', 'ROLE_ADMIN']} />}>
+                            <Route path="/admin" element={<AdminDashboard />} />
+                            <Route
+                                path="/admin/pending-sellers"
+                                element={<AdminPendingSellers />}
+                            />
+                            <Route
+                                path="/admin/rejected-sellers"
+                                element={<AdminRejectedSellers />}
+                            />
+                            <Route
+                                path="/admin/categories"
+                                element={<AdminCategories />}
+                            />
+                        </Route>
+
+                        <Route
+                            path="*"
+                            element={<Marketplace token={token} onRequireAuth={openLogin} />}
+                        />
+                    </Routes>
+                </main>
+
+                <Footer />
+
+                <LoginModal
+                    open={showLoginModal}
+                    loading={loginLoading}
+                    loginData={loginData}
+                    onChange={(e) =>
+                        setLoginData((d) => ({
+                            ...d,
+                            [e.target.name]: e.target.value,
+                        }))
                     }
-                >
-                    <Route path="/seller" element={<SellerDashboard />} />
-                    <Route path="/seller/products" element={<Products />} />
-                    <Route path="/seller/warehouse" element={<WarehouseMovements />} /> {}
-                    <Route path="/seller/orders" element={<SellerOrders />} />
-                </Route>
-
-                {/* ADMIN */}
-                <Route element={<RequireRole anyOf={['ADMIN', 'ROLE_ADMIN']} />}>
-                    <Route path="/admin" element={<AdminDashboard />} />
-                    <Route path="/admin/pending-sellers" element={<AdminPendingSellers />} />
-                    <Route path="/admin/rejected-sellers" element={<AdminRejectedSellers />} />
-                    <Route path="/admin/categories" element={<AdminCategories />} />
-                </Route>
-
-                {/* FALLBACK */}
-                <Route
-                    path="*"
-                    element={<Marketplace token={token} onRequireAuth={openLogin} />}
+                    onLogin={handleLogin}
+                    onClose={() => setShowLoginModal(false)}
                 />
-            </Routes>
 
-            {/* LOGIN */}
-            <LoginModal
-                open={showLoginModal}
-                loading={loginLoading}
-                loginData={loginData}
-                onChange={(e) =>
-                    setLoginData((d) => ({
-                        ...d,
-                        [e.target.name]: e.target.value,
-                    }))
-                }
-                onLogin={handleLogin}
-                onClose={() => setShowLoginModal(false)}
-            />
+                <RegisterModal
+                    open={showRegisterModal}
+                    onClose={() => setShowRegisterModal(false)}
+                    onRegistered={({ email, password }) =>
+                        handleLoginWith(email, password)
+                    }
+                />
 
-            {/* REGISTER */}
-            <RegisterModal
-                open={showRegisterModal}
-                onClose={() => setShowRegisterModal(false)}
-                onRegistered={({ email, password }) => handleLoginWith(email, password)}
-            />
-
-            {/* BECOME SELLER */}
-            <BecomeSellerModal
-                open={showBecomeSeller}
-                onClose={() => setShowBecomeSeller(false)}
-                onSuccess={() => {
-                    setShowBecomeSeller(false);
-                    alert('Заявка отправлена. Ожидайте подтверждение администратора.');
-                }}
-            />
+                <BecomeSellerModal
+                    open={showBecomeSeller}
+                    onClose={() => setShowBecomeSeller(false)}
+                    onSuccess={() => {
+                        setShowBecomeSeller(false);
+                        alert(
+                            'Заявка отправлена. Ожидайте подтверждение администратора.'
+                        );
+                    }}
+                />
+            </div>
         </ToastProvider>
     );
 }

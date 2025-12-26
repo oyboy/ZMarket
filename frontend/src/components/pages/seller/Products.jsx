@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import ProductsGrid from '../../Productservice/ProductsGrid';
 import ProductModal from '../../Productservice/ProductModal';
 import { apiFetch } from '../../../services/api';
@@ -81,10 +81,13 @@ const Products = () => {
         setShowModal(true);
     };
 
-    const onChange = (e) => {
+    const onChange = useCallback((e) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: name === 'price' || name === 'stock' ? Number(value) : value }));
-    };
+        setFormData(prev => ({
+            ...prev,
+            [name]: (name === 'price' || name === 'stock') ? Number(value) : value
+        }));
+    }, []);
 
     // НОВЫЕ эндпоинты: upload -> возвращаем objectKey, setMain/delete работают через ?key=
     const uploadImage = async (productUUID, file) => {
@@ -133,14 +136,16 @@ const Products = () => {
         if (!res.ok) throw new Error(await res.text().catch(() => 'Delete failed'));
     };
 
-    const save = async () => {
+    const save = async (patch = {}) => {
         try {
+            const payload = { ...formData, ...patch };
+
             const url = isEdit
                 ? `${PRODUCTS_API}/products/${currentProduct.productUUID}`
                 : `${PRODUCTS_API}/products`;
             const method = isEdit ? 'PATCH' : 'POST';
 
-            const saved = await apiFetch(url, { method, body: JSON.stringify(formData) });
+            const saved = await apiFetch(url, { method, body: JSON.stringify(payload) });
             const productUUID = isEdit ? currentProduct.productUUID : saved?.productUUID;
 
             if (imageFile && productUUID) {
