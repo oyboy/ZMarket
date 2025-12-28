@@ -29,6 +29,9 @@ public class ProductOrderStats {
     @Column(name = "orders_cnt", nullable = false)
     private long ordersCnt = 0;
 
+    @Column(name = "quantity_sum", nullable = false)
+    private long quantitySum = 0;
+
     @Column(name = "last_order_at", nullable = false)
     private Instant lastOrderAt = Instant.now();
 }

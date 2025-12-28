@@ -236,6 +236,7 @@ public class OrderService {
         return items.stream()
                 .map(i -> new OrderItemEventDto(
                         i.getProductId().toString(),
+                        i.getSellerId().toString(),
                         i.getQuantity()
                 ))
                 .toList();

@@ -5,15 +5,14 @@ import com.scammers.commonkafkaevents.OrderPaidEvent;
 import com.scammers.recservice.controllers.ProductClient;
 import com.scammers.recservice.models.*;
 import com.scammers.recservice.models.responses.ProductInfo;
-import com.scammers.recservice.repositories.ProcessedOrderEventRepository;
-import com.scammers.recservice.repositories.ProductOrderStatsRepository;
-import com.scammers.recservice.repositories.UserOrderProfileRepository;
-import com.scammers.recservice.repositories.UserProductOrdersRepository;
+import com.scammers.recservice.repositories.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 @Service
@@ -23,11 +22,13 @@ public class RecommendationsStatsService {
     private final UserProductOrdersRepository userProductRepo;
     private final UserOrderProfileRepository profileRepo;
     private final ProcessedOrderEventRepository processedRepo;
+    private final SellerProductDailyStatsRepository statsRepo;
     private final ProductClient productClient;
 
     @Transactional
     public void process(OrderPaidEvent ev) {
         UUID eventId = UUID.fromString(ev.getOrderId());
+        Instant ts = Instant.now();
         if (processedRepo.findById(eventId).isPresent()) return;
 
         UUID userId = ev.getUserId();
@@ -38,10 +39,9 @@ public class RecommendationsStatsService {
             ProductInfo info = productClient.getProductInfo(productId);
             Long categoryId = info.categoryId();
             UUID manufacturerId = info.manufacturerId();
+            int qty = item.getQuantity();
 
-            Instant ts = Instant.now();
-
-            // 1) product_order_stats
+            // product_order_stats
             ProductOrderStats ps = productStatsRepo.findById(productId)
                     .orElseGet(() -> {
                         ProductOrderStats p = new ProductOrderStats();
@@ -50,13 +50,31 @@ public class RecommendationsStatsService {
                         p.setManufacturerUuid(manufacturerId);
                         return p;
                     });
-            ps.setOrdersCnt(ps.getOrdersCnt() + item.getQuantity());
+            ps.setOrdersCnt(ps.getOrdersCnt() + 1);
+            ps.setQuantitySum(ps.getQuantitySum() + qty);
             if (ts.isAfter(ps.getLastOrderAt())) {
                 ps.setLastOrderAt(ts);
             }
             productStatsRepo.save(ps);
 
-            // 2) user_product_orders
+            // seller_product_daily_stats
+            LocalDate day = ts.atZone(ZoneOffset.UTC).toLocalDate();
+            var id = new SellerProductDailyStats.Id();
+            id.setSellerUuid(manufacturerId);
+            id.setProductUuid(productId);
+            id.setDay(day);
+
+            SellerProductDailyStats daily = statsRepo.findById(id)
+                    .orElseGet(() -> {
+                        var d = new SellerProductDailyStats();
+                        d.setId(id);
+                        return d;
+                    });
+            daily.setOrdersCnt(daily.getOrdersCnt() + 1);
+            daily.setQuantitySum(daily.getQuantitySum() + qty);
+            statsRepo.save(daily);
+
+            // user_product_orders
             var upId = new UserProductOrders.UserProductOrdersId();
             upId.setUserUuid(userId);
             upId.setProductUuid(productId);
@@ -71,7 +89,7 @@ public class RecommendationsStatsService {
             up.setLastOrderAt(ts);
             userProductRepo.save(up);
 
-            // 3) user_order_profile (если нужно по категориям/производителям)
+            // user_order_profile
             var prId = new UserOrderProfile.UserOrderProfileId();
             prId.setUserUuid(userId);
             prId.setCategoryId(categoryId);

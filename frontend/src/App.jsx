@@ -24,6 +24,7 @@ import Footer from './components/Productservice/Footer';
 import LoginModal from './components/Productservice/LoginModal';
 import RegisterModal from './components/Productservice/Auth/RegisterModal';
 import BecomeSellerModal from './components/Userservice/BecomeSellerModal';
+import SellerStats from './components/pages/seller/SellerStats';
 
 import { getRolesFromToken } from './utils/jwt';
 import {
@@ -210,6 +211,7 @@ export default function App() {
                             <Route path="/seller/products" element={<Products />} />
                             <Route path="/seller/warehouse" element={<WarehouseMovements />} />
                             <Route path="/seller/orders" element={<SellerOrders />} />
+                            <Route path="/seller/stats" element={<SellerStats />} />
                         </Route>
 
                         <Route element={<RequireRole anyOf={['ADMIN', 'ROLE_ADMIN']} />}>
