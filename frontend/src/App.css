@@ -1,5 +1,10 @@
 .App {
   text-align: center;
+
+}
+
+.App-header {
+    font-family: Arial;
 }
 
 .App-logo {

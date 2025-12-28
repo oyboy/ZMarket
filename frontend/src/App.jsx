@@ -46,7 +46,6 @@ export default function App() {
     const [token, setToken] = useState(localStorage.getItem('jwtToken') || null);
 
     const [showLoginModal, setShowLoginModal] = useState(false);
-    const [loginData, setLoginData] = useState({ username: '', password: '' });
     const [loginLoading, setLoginLoading] = useState(false);
 
     const [showRegisterModal, setShowRegisterModal] = useState(false);
@@ -73,8 +72,8 @@ export default function App() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    const handleLogin = async () => {
-        if (!loginData.username || !loginData.password) return;
+    const handleLogin = async ({ username, password }) => {
+        if (!username || !password) return;
 
         setLoginLoading(true);
 
@@ -87,8 +86,8 @@ export default function App() {
                 body: new URLSearchParams({
                     client_id: CLIENT_ID,
                     grant_type: 'password',
-                    username: loginData.username,
-                    password: loginData.password,
+                    username,
+                    password,
                     scope: 'openid profile email',
                 }),
             });
@@ -241,15 +240,9 @@ export default function App() {
                 <LoginModal
                     open={showLoginModal}
                     loading={loginLoading}
-                    loginData={loginData}
-                    onChange={(e) =>
-                        setLoginData((d) => ({
-                            ...d,
-                            [e.target.name]: e.target.value,
-                        }))
-                    }
                     onLogin={handleLogin}
                     onClose={() => setShowLoginModal(false)}
+                    onOpenRegister={openRegister}
                 />
 
                 <RegisterModal

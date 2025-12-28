@@ -3,21 +3,25 @@ import React, { useState } from 'react';
 const LoginModal = ({
                         open,
                         loading,
-                        loginData,
-                        onChange,
                         onLogin,
                         onClose,
-                        onOpenRegister, // опционально
+                        onOpenRegister,
                     }) => {
+    const [form, setForm] = useState({ username: '', password: '' });
     const [showPassword, setShowPassword] = useState(false);
     const [focusedField, setFocusedField] = useState(null);
 
     if (!open) return null;
 
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setForm(prev => ({ ...prev, [name]: value }));
+    };
+
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (loginData.username && loginData.password && !loading) {
-            onLogin && onLogin();
+        if (form.username && form.password && !loading) {
+            onLogin && onLogin({ username: form.username, password: form.password });
         }
     };
 
@@ -31,14 +35,12 @@ const LoginModal = ({
     return (
         <div className="fixed inset-0 z-50 overflow-y-auto">
             <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-                {/* Фон с градиентом и размытием */}
                 <div
                     className="fixed inset-0 bg-gradient-to-br from-blue-500/20 via-purple-500/10 to-pink-500/20 backdrop-blur-sm"
                     onClick={onClose}
                 />
 
                 <div className="inline-block align-bottom bg-white/95 backdrop-blur-md rounded-2xl px-4 pt-5 pb-4 text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full sm:p-8">
-                    {/* Закрывающий крестик */}
                     <button
                         onClick={onClose}
                         className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
@@ -59,7 +61,6 @@ const LoginModal = ({
                         </svg>
                     </button>
 
-                    {/* Заголовок с логотипом */}
                     <div className="text-center mb-6">
                         <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl mb-4">
                             <span className="text-white text-2xl font-bold">Z</span>
@@ -73,7 +74,6 @@ const LoginModal = ({
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-6">
-                        {/* Поле имени пользователя */}
                         <div className="relative">
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 <span className="flex items-center gap-2">
@@ -103,8 +103,8 @@ const LoginModal = ({
                                 <input
                                     type="text"
                                     name="username"
-                                    value={loginData.username || ''}
-                                    onChange={onChange}
+                                    value={form.username}
+                                    onChange={handleChange}
                                     onFocus={() => setFocusedField('username')}
                                     onBlur={() => setFocusedField(null)}
                                     className="w-full px-4 py-3 bg-transparent focus:outline-none"
@@ -114,25 +114,24 @@ const LoginModal = ({
                             </div>
                         </div>
 
-                        {/* Поле пароля */}
                         <div className="relative">
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 <span className="flex items-center gap-2">
-                                    <svg
-                                        className="w-4 h-4"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                                        />
-                                    </svg>
-                                    Пароль
-                                </span>
+                                <svg
+                                    className="w-4 h-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                                    />
+                                </svg>
+                                Пароль
+                            </span>
                             </label>
                             <div
                                 className={`relative rounded-lg border-2 transition-all ${
@@ -144,8 +143,8 @@ const LoginModal = ({
                                 <input
                                     type={showPassword ? 'text' : 'password'}
                                     name="password"
-                                    value={loginData.password || ''}
-                                    onChange={onChange}
+                                    value={form.password}
+                                    onChange={handleChange}
                                     onFocus={() => setFocusedField('password')}
                                     onBlur={() => setFocusedField(null)}
                                     className="w-full px-4 py-3 bg-transparent focus:outline-none"
@@ -168,7 +167,7 @@ const LoginModal = ({
                                                 strokeLinecap="round"
                                                 strokeLinejoin="round"
                                                 strokeWidth={2}
-                                                d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L6.59 6.59m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                                                d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243М9.878 9.878l4.242 4.242М9.878 9.878L6.59 6.59м7.532 7.532л3.29 3.29М3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411м0 0L21 21"
                                             />
                                         </svg>
                                     ) : (
@@ -196,7 +195,6 @@ const LoginModal = ({
                             </div>
                         </div>
 
-                        {/* Забыли пароль? */}
                         <div className="text-right">
                             <button
                                 type="button"
@@ -206,36 +204,24 @@ const LoginModal = ({
                             </button>
                         </div>
 
-                        {/* Кнопка входа */}
                         <button
                             type="submit"
                             disabled={
                                 loading ||
-                                !loginData.username ||
-                                !loginData.password
+                                !form.username ||
+                                !form.password
                             }
                             className="relative w-full px-6 py-4 rounded-xl font-semibold text-white transition-all duration-300 group overflow-hidden bg-gradient-to-r from-blue-500 to-purple-600 shadow-lg hover:shadow-xl hover:from-blue-600 hover:to-purple-700 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <span className="relative z-10 flex items-center justify-center gap-3">
                                 {loading ? (
                                     <>
-                                        <svg
-                                            className="w-5 h-5 animate-spin"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <circle
-                                                className="opacity-25"
-                                                cx="12"
-                                                cy="12"
-                                                r="10"
-                                                stroke="currentColor"
-                                                strokeWidth="4"
-                                            />
+                                        <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                                             <path
                                                 className="opacity-75"
                                                 fill="currentColor"
-                                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938л3-2.647z"
                                             />
                                         </svg>
                                         <span>Входим...</span>
@@ -263,7 +249,6 @@ const LoginModal = ({
                             <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/5 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
                         </button>
 
-                        {/* Разделитель */}
                         <div className="relative">
                             <div className="absolute inset-0 flex items-center">
                                 <div className="w-full border-t border-gray-200" />
@@ -275,7 +260,6 @@ const LoginModal = ({
                             </div>
                         </div>
 
-                        {/* Альтернативные способы входа — просто UI, без логики */}
                         <div className="grid grid-cols-2 gap-3">
                             <button
                                 type="button"
@@ -305,7 +289,6 @@ const LoginModal = ({
                             </button>
                         </div>
 
-                        {/* Ссылка на регистрацию */}
                         <div className="text-center pt-4 border-t border-gray-100">
                             <p className="text-gray-600">
                                 Нет аккаунта?{' '}
