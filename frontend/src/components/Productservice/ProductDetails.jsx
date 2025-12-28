@@ -5,6 +5,9 @@ import StarInput from '../Shared/StarInput';
 import { useToast } from '../Shared/ToastProvider';
 import { formatPrice } from '../../utils/format';
 import { getProductById, getProductAttachments, PRODUCTS_API } from '../../services/products';
+import ProductCard from './ProductCard';
+import {getSameManufacturerProducts} from '../../services/recommendations';
+
 import {
     getProductRating,
     postReview,
@@ -66,6 +69,10 @@ const ProductDetails = ({ onRequireAuth }) => {
 
     const [sellerName, setSellerName] = useState('');
     const [sellerLoading, setSellerLoading] = useState(false);
+
+    const [sameManProducts, setSameManProducts] = useState([]);
+    const [sameManLoading, setSameManLoading] = useState(false);
+    const [sameManError, setSameManError] = useState('');
 
     const token = useMemo(() => localStorage.getItem('jwtToken'), []);
     const roles = useMemo(() => (token ? getRolesFromToken(token) : []), [token]);
@@ -253,6 +260,29 @@ const ProductDetails = ({ onRequireAuth }) => {
             alive = false;
         };
     }, [product]);
+
+    useEffect(() => {
+        let alive = true;
+        (async () => {
+            if (!uuid) return;
+            setSameManLoading(true);
+            setSameManError('');
+            try {
+                const list = await getSameManufacturerProducts(uuid, { limit: 6 });
+                if (!alive) return;
+                setSameManProducts(Array.isArray(list) ? list : []);
+            } catch (e) {
+                if (!alive) return;
+                setSameManProducts([]);
+                setSameManError(e.message || 'Не удалось загрузить товары производителя');
+            } finally {
+                if (alive) setSameManLoading(false);
+            }
+        })();
+        return () => {
+            alive = false;
+        };
+    }, [uuid]);
 
     // хелпер: перезагрузка рейтинга + отзывов
     const refreshRatingAndReviews = async () => {
@@ -845,6 +875,47 @@ const ProductDetails = ({ onRequireAuth }) => {
                     </div>
                 </div>
             </div>
+            {sameManLoading && (
+                <div className="mt-12 text-sm text-gray-500 text-center">
+                    Загружаем товары этого производителя…
+                </div>
+            )}
+
+            {sameManError && (
+                <div className="mt-12 text-sm text-red-600 text-center">
+                    {sameManError}
+                </div>
+            )}
+
+            {!sameManLoading && sameManProducts.length > 0 && (
+                <div className="mt-16 pt-8 border-t border-gray-200">
+                    <h2 className="text-lg font-semibold mb-4 text-center">
+                        Ещё товары этого производителя
+                    </h2>
+                    <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 justify-items-center">
+                        {sameManProducts.map((p) => (
+                            <div
+                                key={p.productUUID || p.id}
+                                className="w-full max-w-xs transform scale-90 md:scale-85 origin-top"
+                            >
+                                <ProductCard
+                                    product={p}
+                                    canManage={false}
+                                    onEdit={null}
+                                    showBuy={true}
+                                    showUpload={false}
+                                    onUpload={null}
+                                    onRequireAuth={onRequireAuth}
+                                    onSetMainAttachment={null}
+                                    onDeleteAttachment={null}
+                                    stockInfo={null}
+                                    onOpenStock={null}
+                                />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

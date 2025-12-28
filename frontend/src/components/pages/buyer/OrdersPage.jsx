@@ -5,6 +5,7 @@ import { formatPrice } from '../../../utils/format';
 import { useToast } from '../../Shared/ToastProvider';
 import { Link, useNavigate } from 'react-router-dom';
 import { getProductAttachments, PRODUCTS_API } from '../../../services/products';
+import RecommendationsSection from "../../Productservice/RecommendationsSection";
 
 const STATUS_LABELS = {
     ALL: 'Все',
@@ -220,6 +221,9 @@ export default function OrdersPage({ onRequireAuth }) {
                         );
                     })
                 )}
+            </div>
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                <RecommendationsSection token={token} />
             </div>
         </div>
     );

@@ -13,6 +13,7 @@ import org.springframework.stereotype.Repository;
 
 import java.sql.SQLException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Repository
 @RequiredArgsConstructor
@@ -145,5 +146,35 @@ public class ProductRepository {
     public void updateStock(UUID productUuid, Long newStock) {
         String command = "UPDATE products SET stock = ? WHERE product_uuid = ?";
         jdbcTemplate.update(command, newStock, productUuid);
+    }
+
+    public List<Product> findTop6BySellerUUIDAndIdNotOrderByCreatedAtDesc(
+            UUID sellerUUID, UUID excludeProductId) {
+
+        String sql = """
+        SELECT id, product_uuid, seller_id, title, description, 
+               price, stock, category_id, attributes, rating
+        FROM products
+        WHERE seller_id = ?
+          AND product_uuid != ?
+        ORDER BY id DESC
+        LIMIT 6
+        """;
+
+        return jdbcTemplate.query(sql, productRowMapper, sellerUUID, excludeProductId);
+    }
+
+    public List<Product> findByUUIDs(List<UUID> uuids) {
+        if (uuids == null || uuids.isEmpty()) {
+            return List.of();
+        }
+
+        String placeholders = uuids.stream()
+                .map(u -> "?")
+                .collect(Collectors.joining(", "));
+
+        String sql = "SELECT * FROM products WHERE product_uuid IN (" + placeholders + ")";
+
+        return jdbcTemplate.query(sql, productRowMapper, uuids.toArray());
     }
 }

@@ -25,6 +25,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/revaggservice/api/v1/ratings/{productId}").permitAll()
                         .requestMatchers(HttpMethod.GET, "/productservice/api/v1/products/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/productservice/api/v1/categories/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/recservice/api/v1/recommendations/popular").permitAll()
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(withDefaults()))
