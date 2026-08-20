@@ -1,32 +1,63 @@
-import React, { useState } from 'react';
+// import React, { useState } from 'react';
+//
+// const StarInput = ({ value = 0, onChange, size = 5, readOnly = false }) => {
+//     const [hover, setHover] = useState(0);
+//     const curr = hover || value;
+//
+//     const Star = ({ i }) => (
+//         <button
+//             type="button"
+//             disabled={readOnly}
+//             onMouseEnter={() => !readOnly && setHover(i)}
+//             onMouseLeave={() => !readOnly && setHover(0)}
+//             onClick={() => !readOnly && onChange && onChange(i)}
+//             className="p-0.5"
+//             aria-label={`${i} звезд`}
+//             title={`${i}`}
+//         >
+//             <svg
+//                 className={`w-${size} h-${size} ${i <= curr ? 'text-yellow-400' : 'text-gray-300'}`}
+//                 fill="currentColor" viewBox="0 0 20 20"
+//             >
+//                 <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+//             </svg>
+//         </button>
+//     );
+//
+//     return (
+//         <div className="flex items-center gap-1">
+//             {[1,2,3,4,5].map(i => <Star key={i} i={i} />)}
+//         </div>
+//     );
+// };
+//
+// export default StarInput;
 
-const StarInput = ({ value = 0, onChange, size = 5, readOnly = false }) => {
-    const [hover, setHover] = useState(0);
-    const curr = hover || value;
 
-    const Star = ({ i }) => (
-        <button
-            type="button"
-            disabled={readOnly}
-            onMouseEnter={() => !readOnly && setHover(i)}
-            onMouseLeave={() => !readOnly && setHover(0)}
-            onClick={() => !readOnly && onChange && onChange(i)}
-            className="p-0.5"
-            aria-label={`${i} звезд`}
-            title={`${i}`}
-        >
-            <svg
-                className={`w-${size} h-${size} ${i <= curr ? 'text-yellow-400' : 'text-gray-300'}`}
-                fill="currentColor" viewBox="0 0 20 20"
-            >
-                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-            </svg>
-        </button>
-    );
+import React from 'react';
 
+const StarInput = ({ value = 0, onChange, maxRating = 5 }) => {
     return (
-        <div className="flex items-center gap-1">
-            {[1,2,3,4,5].map(i => <Star key={i} i={i} />)}
+        <div className="flex items-center">
+            {[...Array(maxRating)].map((_, index) => {
+                const starValue = index + 1;
+                return (
+                    <button
+                        key={index}
+                        type="button"
+                        onClick={() => onChange(starValue)}
+                        className="focus:outline-none"
+                    >
+                        <svg
+                            className={`w-8 h-8 ${starValue <= value ? 'text-yellow-400' : 'text-gray-300'}`}
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                        >
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                    </button>
+                );
+            })}
         </div>
     );
 };
