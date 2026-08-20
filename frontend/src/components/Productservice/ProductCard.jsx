@@ -52,17 +52,17 @@ const useInViewportOnce = (threshold = 0.2) => {
 };
 
 const ProductCard = ({
-    product,
-    canManage,
-    onEdit,
-    showBuy = true,
-    showUpload = false,
-    onUpload,
-    onRequireAuth,
-    onSetMainAttachment,
-    onDeleteAttachment,
-    stockInfo,
-    onOpenStock
+                         product,
+                         canManage,
+                         onEdit,
+                         showBuy = true,
+                         showUpload = false,
+                         onUpload,
+                         onRequireAuth,
+                         onSetMainAttachment,
+                         onDeleteAttachment,
+                         stockInfo,
+                         onOpenStock
 }) => {
     const requireAuth = typeof onRequireAuth === 'function' ? onRequireAuth : () => alert('Нужно войти');
 
@@ -76,6 +76,11 @@ const ProductCard = ({
     const token = useMemo(() => localStorage.getItem('jwtToken'), []);
     const roles = useMemo(() => (token ? getRolesFromToken(token) : []), [token]);
     const isUser = roles.includes('USER') || roles.includes('ROLE_USER');
+
+    const token = useMemo(() => localStorage.getItem('jwtToken'), []);
+    const roles = useMemo(() => (token ? getRolesFromToken(token) : []), [token]);
+    const isUser = roles.includes('USER') || roles.includes('ROLE_USER');
+
 
     const productId = useMemo(() => product.productUUID || product.id, [product]);
     const navigate = useNavigate();
@@ -393,98 +398,62 @@ const ProductCard = ({
                         )}
                     </div>
 
+                <div className={`flex items-center ${showBuy ? 'justify-between' : 'justify-start'}`}>
+                    <span className="text-xl font-bold text-gray-900">{formatPrice(product.price)}</span>
                     {showBuy && isUser && (
                         <button
                             onClick={handleAddToCart}
-                            className="relative px-5 py-2.5 rounded-xl font-medium transition-all duration-300 group overflow-hidden active:scale-95"
+                            className="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-blue-600 hover:bg-blue-700 text-white"
                         >
-                            <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 group-hover:from-blue-600 group-hover:to-purple-700"></div>
-                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/5 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
-                            <span className="relative z-10 flex items-center space-x-2 text-white font-semibold">
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                </svg>
-                                <span>В корзину</span>
-                            </span>
+                            В корзину
                         </button>
                     )}
                 </div>
 
-                {/* Management Controls */}
-                {(canManage || showUpload) && (
-                    <div className="pt-4 border-t border-gray-100">
-                        <div className="flex flex-wrap gap-2">
-                            {canManage && (
-                                <button
-                                    onClick={() => onEdit && onEdit(product)}
-                                    className="relative px-4 py-2 rounded-lg font-medium transition-all duration-300 group overflow-hidden"
-                                >
-                                    <div className="absolute inset-0 bg-gradient-to-r from-emerald-50 to-green-50 group-hover:from-emerald-100 group-hover:to-green-100"></div>
-                                    <div className="absolute inset-0 border border-emerald-200 rounded-lg group-hover:border-emerald-300"></div>
-                                    <span className="relative z-10 flex items-center space-x-2 text-emerald-700 font-medium">
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                        </svg>
-                                        <span>Редактировать</span>
-                                    </span>
-                                </button>
-                            )}
+                <div className="flex flex-wrap items-center gap-2 mt-2">
+                    {canManage && (
+                        <button
+                            onClick={() => onEdit && onEdit(product)}
+                            className="px-3 py-1.5 rounded-lg text-sm font-medium bg-green-600 hover:bg-green-700 text-white shrink-0"
+                        >
+                            Редактировать
+                        </button>
+                    )}
+                    {canManage && onOpenStock && (
+                        <button
+                            onClick={() => onOpenStock(product)}
+                            className="px-3 py-1.5 rounded-lg text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white shrink-0"
+                        >
+                            Изменить количество
+                        </button>
+                    )}
+                    {showUpload && (
+                        <>
+                            <input
+                                id={uploadInputId}
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={handleFileChange}
+                            />
+                            <label
+                                htmlFor={uploadInputId}
+                                className="cursor-pointer px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-800 shrink-0"
+                            >
+                                Загрузить фото
+                            </label>
+                        </>
+                    )}
 
-                            {canManage && onOpenStock && (
-                                <button
-                                    onClick={() => onOpenStock(product)}
-                                    className="relative px-4 py-2 rounded-lg font-medium transition-all duration-300 group overflow-hidden"
-                                >
-                                    <div className="absolute inset-0 bg-gradient-to-r from-violet-50 to-indigo-50 group-hover:from-violet-100 group-hover:to-indigo-100"></div>
-                                    <div className="absolute inset-0 border border-violet-200 rounded-lg group-hover:border-violet-300"></div>
-                                    <span className="relative z-10 flex items-center space-x-2 text-violet-700 font-medium">
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                                        </svg>
-                                        <span>Склад</span>
-                                    </span>
-                                </button>
-                            )}
-
-                            {showUpload && (
-                                <>
-                                    <input id={uploadInputId} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-                                    <label
-                                        htmlFor={uploadInputId}
-                                        className="relative px-4 py-2 rounded-lg font-medium transition-all duration-300 group overflow-hidden cursor-pointer"
-                                    >
-                                        <div className="absolute inset-0 bg-gradient-to-r from-gray-50 to-blue-50 group-hover:from-gray-100 group-hover:to-blue-100"></div>
-                                        <div className="absolute inset-0 border border-gray-200 rounded-lg group-hover:border-gray-300"></div>
-                                        <span className="relative z-10 flex items-center space-x-2 text-gray-700 font-medium">
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                                            </svg>
-                                            <span>Загрузить фото</span>
-                                        </span>
-                                    </label>
-                                </>
+                    {canManage && stockInfo && (
+                        <div className="basis-full text-xs text-gray-600 pt-1">
+                            На складе: <span className="font-medium">{stockInfo.available}</span>
+                            {typeof stockInfo.quantityReserved === 'number' && (
+                                <span className="ml-2 text-gray-500">резерв: {stockInfo.quantityReserved}</span>
                             )}
                         </div>
-
-                        {/* Stock Info for Admins */}
-                        {canManage && stockInfo && (
-                            <div className="mt-3 pt-3 border-t border-gray-100">
-                                <div className="grid grid-cols-2 gap-2 text-xs">
-                                    <div className="flex flex-col p-2 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50">
-                                        <span className="text-gray-600 mb-1">На складе</span>
-                                        <span className="font-bold text-gray-900 text-sm">{stockInfo.available} шт.</span>
-                                    </div>
-                                    {typeof stockInfo.quantityReserved === 'number' && (
-                                        <div className="flex flex-col p-2 rounded-lg bg-gradient-to-r from-amber-50 to-orange-50">
-                                            <span className="text-gray-600 mb-1">В резерве</span>
-                                            <span className="font-bold text-amber-700 text-sm">{stockInfo.quantityReserved} шт.</span>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
 
             {/* Bottom gradient line like in header */}

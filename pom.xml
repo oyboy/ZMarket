@@ -30,6 +30,7 @@
         <module>backend/review-aggregate-service</module>
         <module>backend/user-service</module>
         <module>backend/cart-service</module>
+        <module>backend/warehouse-service</module>
 	</modules>
 	<build>
 		<plugins>

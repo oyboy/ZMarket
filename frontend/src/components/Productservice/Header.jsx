@@ -89,47 +89,16 @@ export default function Header({
     ];
 
     return (
-        <header className={`sticky top-0 z-50 transition-all duration-300 ${scrolled ? 'bg-white/95 backdrop-blur-md shadow-lg' : 'bg-gradient-to-r from-blue-50 to-indigo-50'}`}>
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex items-center justify-between h-16">
-                    {/* Логотип и навигация - ИЗМЕНЕНО: буква Z вместо M */}
-                    <div className="flex items-center">
-                        <Link to="/" className="flex items-center space-x-3 group">
-                            <div className="relative">
-                                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center transform group-hover:rotate-12 transition-transform duration-300 shadow-lg">
-                                    <span className="text-white font-bold text-lg font-['Poppins']">Z</span>
-                                </div>
-                                <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full animate-pulse"></div>
-                            </div>
-                            <div>
-                                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent font-['Poppins']">
-                                    ZMarket
-                                </h1>
-                                <p className="text-xs text-gray-500 font-['Inter']">Гойда</p>
-                            </div>
-                        </Link>
-
-
-                        <nav className="hidden md:ml-10 md:flex md:space-x-1">
-                            {navItems.map((item, index) => (
-                                <Link
-                                    key={item.to}
-                                    to={item.to}
-                                    className={`relative px-4 py-2 rounded-lg flex items-center space-x-2 transition-all duration-300 font-['Inter'] ${
-                                        location.pathname === item.to
-                                            ? 'text-white bg-gradient-to-r from-blue-500 to-purple-500 shadow-md'
-                                            : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
-                                    }`}
-                                >
-                                    <span className="text-lg">{item.icon}</span>
-                                    <span className="font-medium">{item.label}</span>
-                                    {location.pathname === item.to && (
-                                        <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full animate-pulse"></div>
-                                    )}
-                                </Link>
-                            ))}
-                        </nav>
-                    </div>
+        <header className="bg-white border-b">
+            <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <Link to="/" className="font-bold text-lg">Marketplace</Link>
+                    <Link to="/" className="text-gray-700 hover:text-gray-900">Каталог</Link>
+                    {isSeller && <Link to="/seller" className="text-gray-700 hover:text-gray-900">Кабинет продавца</Link>}
+                    {isAdmin && <Link to="/admin" className="text-gray-700 hover:text-gray-900">Админка</Link>}
+                    {isBuyer && <Link to="/cart" className="text-gray-700 hover:text-gray-900">Корзина</Link>}
+                    {isBuyer && <Link to="/orders" className="text-gray-700 hover:text-gray-900">Мои заказы</Link>}
+                </div>
 
                     {/* Кнопки пользователя - ИЗМЕНЕНО: иконка для кнопки "Войти" */}
                     <div className="flex items-center space-x-3">

@@ -260,56 +260,22 @@ import RequireAuth from './components/Productservice/Auth/RequireAuth';
 import RegisterModal from './components/Productservice/Auth/RegisterModal';
 
 
+import { getRolesFromToken } from './utils/jwt';
 
-// Создаем простой фон без сложных анимаций (чтобы избежать ошибок)
-const SimpleWaveBackground = () => {
-    return (
-        <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-purple-50 opacity-70"></div>
-            <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-blue-100/30 to-transparent"></div>
-        </div>
-    );
-};
+import WarehouseMovements from './components/pages/seller/WarehouseMovements';
 
-// Временные заглушки для отсутствующих компонентов
-const SellerDashboard = () => (
-    <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-6">Кабинет продавца</h1>
-        <p className="text-gray-600">Функционал в разработке...</p>
-    </div>
-);
+import OrdersPage from './components/pages/buyer/OrdersPage';
+import OrderDetails from './components/pages/buyer/OrderDetails';
+import SellerOrders from './components/pages/seller/SellerOrders';
 
-const AdminDashboard = () => (
-    <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-6">Админ панель</h1>
-        <p className="text-gray-600">Функционал в разработке...</p>
-    </div>
-);
-
-const AdminPendingSellers = () => (
-    <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-6">Заявки продавцов</h1>
-        <p className="text-gray-600">Функционал в разработке...</p>
-    </div>
-);
-
-const AdminRejectedSellers = () => (
-    <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-6">Отклоненные заявки</h1>
-        <p className="text-gray-600">Функционал в разработке...</p>
-    </div>
-);
-
-// Временные утилиты (замените на реальные при необходимости)
-const getRolesFromToken = (token) => {
-    if (!token) return [];
-    try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        return payload.roles || payload.authorities || [];
-    } catch {
-        return [];
-    }
-};
+import {
+    TOKEN_URL,
+    CLIENT_ID,
+    onLogin,
+    logout,
+    scheduleAutoRefresh,
+} from './services/http';
+import {ToastProvider} from "./components/Shared/ToastProvider";
 
 export default function App() {
     const [token, setToken] = useState(localStorage.getItem('jwtToken') || null);
@@ -445,82 +411,51 @@ export default function App() {
                 onOpenBecomeSeller={openBecomeSeller}
             />
 
-            {/* Основной контент */}
-            <main className="flex-1 relative z-10">
-                <Routes>
-                    {/* Публичные маршруты */}
-                    <Route
-                        path="/"
-                        element={
-                            <Marketplace
-                                token={token}
-                                onRequireAuth={openLogin}
-                            />
-                        }
-                    />
+            <Routes>
+                {/* PUBLIC */}
+                <Route
+                    path="/"
+                    element={<Marketplace token={token} onRequireAuth={openLogin} />}
+                />
+                <Route
+                    path="/product/:uuid"
+                    element={<ProductDetails onRequireAuth={openLogin} />}
+                />
 
-                    <Route
-                        path="/product/:uuid"
-                        element={
-                            <ProductDetails
-                                onRequireAuth={openLogin}
-                            />
-                        }
-                    />
+                {/* CART */}
+                <Route path="/cart" element={<CartPage onRequireAuth={openLogin} />} />
 
-                    {/* Маршруты продавца */}
-                    <Route
-                        element={
-                            <RequireRole anyOf={['SELLER', 'ROLE_SELLER', 'ADMIN', 'ROLE_ADMIN']} />
-                        }
-                    >
-                        <Route
-                            path="/seller"
-                            element={<SellerDashboard />}
-                        />
-                    </Route>
+                {/*Orders*/}
+                <Route path="/orders" element={<OrdersPage onRequireAuth={openLogin} />} />
+                <Route path="/orders/:orderId" element={<OrderDetails />} />
 
-                    {/* Маршруты администратора */}
-                    <Route
-                        element={<RequireRole anyOf={['ADMIN', 'ROLE_ADMIN']} />}
-                    >
-                        <Route
-                            path="/admin"
-                            element={<AdminDashboard />}
-                        />
-                        <Route
-                            path="/admin/pending-sellers"
-                            element={<AdminPendingSellers />}
-                        />
-                        <Route
-                            path="/admin/rejected-sellers"
-                            element={<AdminRejectedSellers />}
-                        />
-                    </Route>
+                {/* SELLER */}
+                <Route
+                    element={
+                        <RequireRole anyOf={['SELLER', 'ROLE_SELLER', 'ADMIN', 'ROLE_ADMIN']} />
+                    }
+                >
+                    <Route path="/seller" element={<SellerDashboard />} />
+                    <Route path="/seller/products" element={<Products />} />
+                    <Route path="/seller/warehouse" element={<WarehouseMovements />} /> {}
+                    <Route path="/seller/orders" element={<SellerOrders />} />
+                </Route>
 
-                    {/* Fallback маршрут */}
-                    <Route
-                        path="*"
-                        element={
-                            <div className="container mx-auto px-4 py-8">
-                                <h1 className="text-3xl font-bold mb-4">404 - Страница не найдена</h1>
-                                <p className="text-gray-600 mb-4">Запрошенная страница не существует.</p>
-                                <button
-                                    onClick={() => navigate('/')}
-                                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                                >
-                                    Вернуться на главную
-                                </button>
-                            </div>
-                        }
-                    />
-                </Routes>
-            </main>
+                {/* ADMIN */}
+                <Route element={<RequireRole anyOf={['ADMIN', 'ROLE_ADMIN']} />}>
+                    <Route path="/admin" element={<AdminDashboard />} />
+                    <Route path="/admin/pending-sellers" element={<AdminPendingSellers />} />
+                    <Route path="/admin/rejected-sellers" element={<AdminRejectedSellers />} />
+                </Route>
 
-            {/* Футер */}
-            <Footer />
+                {/* FALLBACK */}
+                <Route
+                    path="*"
+                    element={<Marketplace token={token} onRequireAuth={openLogin} />}
+                />
+            </Routes>
 
-            {/* Модальные окна */}
+            {/* LOGIN */}
             <LoginModal
                 open={showLoginModal}
                 loading={loginLoading}

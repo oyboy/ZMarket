@@ -28,7 +28,7 @@ public class RatingProjectionRepository {
 
         String sql = """
             insert into rating_projection(product_uuid, cnt, sum, avg, b1,b2,b3,b4,b5, last_review_at)
-            values(?, 1, ?, 0, ?,?,?,?,?, now())
+            values(?, 1, ?, ?, ?,?,?,?,?, now())
             on conflict (product_uuid) do update set
                 cnt = rating_projection.cnt + 1,
                 sum = rating_projection.sum + excluded.sum,
@@ -41,7 +41,7 @@ public class RatingProjectionRepository {
                 last_review_at = now()
             """;
 
-        jdbc.update(sql, productId, rating, b1, b2, b3, b4, b5);
+        jdbc.update(sql, productId, rating, (double) rating, b1, b2, b3, b4, b5);
     }
 
     public void applyDelete(UUID productId, int rating) {
@@ -116,4 +116,3 @@ public class RatingProjectionRepository {
         return results.stream().findFirst();
     }
 }
-

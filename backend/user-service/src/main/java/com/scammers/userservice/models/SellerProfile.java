@@ -56,4 +56,6 @@ public class SellerProfile {
     public BigDecimal getRatingAsDecimal() {
         return BigDecimal.valueOf(rating, 2);
     }
+
+    private String avatarUrl;
 }

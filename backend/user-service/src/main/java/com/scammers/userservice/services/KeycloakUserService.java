@@ -1,5 +1,6 @@
 package com.scammers.userservice.services;
 
+import com.scammers.commonresilience.Resilient;
 import com.scammers.userservice.exceptions.KeycloakOperationException;
 import com.scammers.userservice.exceptions.UserAlreadyExistsException;
 import com.scammers.userservice.models.BuyerProfile;
@@ -7,6 +8,7 @@ import com.scammers.userservice.models.SellerProfile;
 import com.scammers.userservice.models.User;
 import com.scammers.userservice.models.enums.VerificationStatus;
 import com.scammers.userservice.models.requests.CompanyRegistrationRequest;
+import com.scammers.userservice.models.requests.UpdateSellerProfileRequest;
 import com.scammers.userservice.models.requests.UserRegistrationRequest;
 import com.scammers.userservice.repositories.BuyerProfileRepository;
 import com.scammers.userservice.repositories.SellerProfileRepository;
@@ -21,6 +23,7 @@ import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -29,6 +32,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Resilient("user-service")
 public class KeycloakUserService {
     @Value("${keycloak.realm}")
     private String realm;
@@ -36,6 +40,8 @@ public class KeycloakUserService {
     private final Keycloak keycloak;
     private final UserRepository userRepository;
     private final SellerProfileRepository sellerProfileRepository;
+    private final BuyerProfileRepository buyerProfileRepository;
+    private final StorageService storageService;
 
     private static final String USER_ROLE = "USER";
 
@@ -142,7 +148,47 @@ public class KeycloakUserService {
                 .add(List.of(role));
     }
 
+    @Transactional
+    public SellerProfile updateSellerProfile(UUID userId, UpdateSellerProfileRequest req) {
+        SellerProfile profile = sellerProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Профиль продавца не найден"));
+
+        profile.setCompanyName(req.getCompanyName());
+        profile.setDescription(req.getDescription());
+
+        return sellerProfileRepository.save(profile);
+    }
+
+    @Transactional
+    public String uploadSellerAvatar(UUID userId, MultipartFile file) {
+        SellerProfile profile = sellerProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Профиль продавца не найден"));
+
+        String fileName = storageService.uploadAvatar(userId, file);
+        String fullUrl = storageService.getPublicUrl(fileName);
+        profile.setAvatarUrl(fullUrl);
+
+        sellerProfileRepository.save(profile);
+
+        return fullUrl;
+    }
+
+    @Transactional
+    public void deleteSellerAvatar(UUID userId) {
+        SellerProfile profile = sellerProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Профиль продавца не найден"));
+
+        storageService.deleteFile(profile.getAvatarUrl());
+        profile.setAvatarUrl(null);
+
+        sellerProfileRepository.save(profile);
+    }
+
     public Optional<SellerProfile> getSellerProfile(UUID userId) {
         return sellerProfileRepository.findByUserId((userId));
+    }
+
+    public Optional<BuyerProfile> getBuyerProfile(UUID userId) {
+        return buyerProfileRepository.findByUserId(userId);
     }
 }

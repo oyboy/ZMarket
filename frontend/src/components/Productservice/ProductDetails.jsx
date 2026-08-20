@@ -3,8 +3,8 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import StarRating from '../Shared/StarRating';
 import StarInput from '../Shared/StarInput';
 import { formatPrice } from '../../utils/format';
-import { getProductById, getProductAttachments, PRODUCTS_API } from '../../../src/services/products';
-import { getProductRating, postReview, getProductReviews } from '../../../src/services/reviews';
+import { getProductById, getProductAttachments, PRODUCTS_API } from '../../services/products';
+import { getProductRating, postReview, getProductReviews } from '../../services/reviews';
 import { getRolesFromToken } from '../../utils/jwt';
 
 const Bar = ({ label, value, total }) => {

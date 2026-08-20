@@ -12,6 +12,7 @@ import java.util.UUID;
 @Builder
 public class CartItemEntity implements Serializable {
     private UUID productId;
+    private UUID sellerId;
     private Integer quantity;
 
     private String title;
