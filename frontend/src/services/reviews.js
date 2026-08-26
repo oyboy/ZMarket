@@ -1,71 +1,80 @@
-export const PRODUCTS_API =
-    process.env.REACT_APP_PRODUCTS_URL ||
-    'http://localhost:8072/productservice/api/v1';
+//export const PRODUCTS_API =
+//    process.env.REACT_APP_PRODUCTS_URL ||
+//    'http://localhost:8072/productservice/api/v1';
+//
+//export async function getProductRating(productUUID) {
+//    const res = await fetch(`${PRODUCTS_API}/products/${productUUID}/reviews/rating`, {
+//        headers: { Accept: 'application/json' },
+//    });
+//    if (!res.ok) throw new Error(`Rating HTTP ${res.status}`);
+//    return res.json();
+//}
+//
+//export async function postReview(productUUID, { mark, text }, token) {
+//    const res = await fetch(`${PRODUCTS_API}/products/${productUUID}/reviews`, {
+//        method: 'POST',
+//        headers: {
+//            'Content-Type': 'application/json',
+//            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+//        },
+//        body: JSON.stringify({ mark, text }),
+//    });
+//    if (res.status === 202) return { accepted: true };
+//    if (res.status === 401) throw new Error('UNAUTHORIZED');
+//    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+//    return { accepted: true };
+//}
+//
+//export async function getProductReviews(productUUID, { limit = 10, offset = 0 } = {}) {
+//    const url = `${PRODUCTS_API}/products/${productUUID}/reviews?limit=${limit}&offset=${offset}`;
+//    const res = await fetch(url, { headers: { Accept: 'application/json' } });
+//    if (!res.ok) return [];
+//    const data = await res.json();
+//    return (Array.isArray(data) ? data : []).map((x, i) => ({
+//        id: x.id ?? `${x.userId}-${i}`,
+//        userId: x.userId,
+//        rating: Number(x.rating ?? 0),
+//        text: x.text ?? '',
+//        createdAt: x.updated_at ?? null
+//    }));
+//}
 
-export async function getProductRating(productUUID) {
-    const res = await fetch(`${PRODUCTS_API}/products/${productUUID}/reviews/rating`, {
-        headers: { Accept: 'application/json' },
-    });
-    if (!res.ok) throw new Error(`Rating HTTP ${res.status}`);
-    return res.json();
-}
 
-export async function postReview(productUUID, { mark, text }, token) {
-    const res = await fetch(`${PRODUCTS_API}/products/${productUUID}/reviews`, {
+import { apiFetch } from './api';
+
+const REVIEWS_API = process.env.REACT_APP_REVIEWS_URL || 'http://localhost:8072/reviewservice/api/v1';
+
+export const getProductReviews = async (productId, params = {}) => {
+    const queryParams = new URLSearchParams(params).toString();
+    return apiFetch(`${REVIEWS_API}/reviews/product/${productId}${queryParams ? `?${queryParams}` : ''}`);
+};
+
+export const getProductRating = async (productId) => {
+    return apiFetch(`${REVIEWS_API}/reviews/product/${productId}/rating`);
+};
+
+export const postReview = async (productId, reviewData, token) => {
+    return apiFetch(`${REVIEWS_API}/reviews`, {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ mark, text }),
+        body: JSON.stringify({
+            productId,
+            ...reviewData,
+        }),
     });
-    if (res.status === 202) return { accepted: true };
-    if (res.status === 401) throw new Error('UNAUTHORIZED');
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return { accepted: true };
-}
+};
 
-export async function getProductReviews(productUUID, { limit = 10, offset = 0 } = {}) {
-    const url = `${PRODUCTS_API}/products/${productUUID}/reviews?limit=${limit}&offset=${offset}`;
-    const res = await fetch(url, { headers: { Accept: 'application/json' } });
-    if (!res.ok) return [];
-    const data = await res.json();
-    return (Array.isArray(data) ? data : []).map((x, i) => ({
-        id: x.id ?? `${x.userId}-${i}`, // id отзыва, если есть
-        userId: x.userId,
-        rating: Number(x.rating ?? 0),
-        text: x.text ?? '',
-        createdAt: x.updated_at ?? x.updatedAt ?? x.created_at ?? null,
-    }));
-}
+export const updateReview = async (reviewId, reviewData) => {
+    return apiFetch(`${REVIEWS_API}/reviews/${reviewId}`, {
+        method: 'PUT',
+        body: JSON.stringify(reviewData),
+    });
+};
 
-export async function deleteMyReview(productUUID, token) {
-    if (!token) throw new Error('UNAUTHORIZED');
-    const res = await fetch(`${PRODUCTS_API}/products/${productUUID}/reviews`, {
+export const deleteReview = async (reviewId) => {
+    return apiFetch(`${REVIEWS_API}/reviews/${reviewId}`, {
         method: 'DELETE',
-        headers: {
-            Accept: 'application/json',
-            Authorization: `Bearer ${token}`,
-        },
     });
-    if (res.status === 401) throw new Error('UNAUTHORIZED');
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return true;
-}
-
-export async function adminDeleteReview(productUUID, targetUserId, token) {
-    if (!token) throw new Error('UNAUTHORIZED');
-    const res = await fetch(
-        `${PRODUCTS_API}/products/${productUUID}/reviews/${targetUserId}`,
-        {
-            method: 'DELETE',
-            headers: {
-                Accept: 'application/json',
-                Authorization: `Bearer ${token}`,
-            },
-        }
-    );
-    if (res.status === 401) throw new Error('UNAUTHORIZED');
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return true;
-}
+};

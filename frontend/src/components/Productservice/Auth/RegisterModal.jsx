@@ -1,16 +1,83 @@
-import React, { useState } from 'react';
-import { registerUser } from '../../../services/users';
+// import React, { useState } from 'react';
+// import { registerUser } from '../../../services/users';
+//
+// const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// const pwdRe = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/;
+//
+// const RegisterModal = ({ open, onClose, onRegistered }) => {
+//     const [form, setForm] = useState({
+//         firstName: '', lastName: '', email: '', password: '', confirmPassword: ''
+//     });
+//     const [loading, setLoading] = useState(false);
+//     const [msg, setMsg] = useState('');
+//
+//     if (!open) return null;
+//
+//     const change = (e) => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
+//
+//     const validate = () => {
+//         if (!form.firstName || !form.lastName || !form.email || !form.password || !form.confirmPassword) { setMsg('Заполните все поля'); return false; }
+//         if (!emailRe.test(form.email)) { setMsg('Некорректный формат email'); return false; }
+//         if (form.password.length < 8 || form.password.length > 72) { setMsg('Пароль должен быть от 8 до 72 символов'); return false; }
+//         if (!pwdRe.test(form.password)) { setMsg('Пароль должен содержать строчные, заглавные буквы и цифры'); return false; }
+//         if (form.password !== form.confirmPassword) { setMsg('Пароли не совпадают'); return false; }
+//         return true;
+//     };
+//
+//     const submit = async () => {
+//         if (!validate()) return;
+//         setLoading(true); setMsg('');
+//         try {
+//             await registerUser(form); // { userId }
+//             // авто-логин: используем email как username и текущий пароль
+//             onRegistered && onRegistered({ email: form.email, password: form.password });
+//         } catch (e) {
+//             setMsg(e.message || 'Ошибка регистрации');
+//             return;
+//         } finally {
+//             setLoading(false);
+//         }
+//         onClose && onClose();
+//     };
+//
+//     return (
+//         <div className="fixed inset-0 z-50">
+//             <div className="fixed inset-0 bg-black/40" onClick={onClose} />
+//             <div className="relative max-w-md w-full bg-white rounded-lg shadow-xl mx-auto mt-24 p-6">
+//                 <h3 className="text-lg font-semibold mb-4">Регистрация</h3>
+//                 <div className="space-y-3">
+//                     <input name="firstName" value={form.firstName} onChange={change} placeholder="Имя" className="w-full border rounded px-3 py-2" />
+//                     <input name="lastName" value={form.lastName} onChange={change} placeholder="Фамилия" className="w-full border rounded px-3 py-2" />
+//                     <input name="email" type="email" value={form.email} onChange={change} placeholder="Email (используем для входа)" className="w-full border rounded px-3 py-2" />
+//                     <input name="password" type="password" value={form.password} onChange={change} placeholder="Пароль" className="w-full border rounded px-3 py-2" />
+//                     <input name="confirmPassword" type="password" value={form.confirmPassword} onChange={change} placeholder="Подтвердите пароль" className="w-full border rounded px-3 py-2" />
+//                 </div>
+//                 {msg && <div className="text-sm mt-3">{msg}</div>}
+//                 <div className="mt-4 flex items-center gap-2">
+//                     <button onClick={submit} disabled={loading} className="px-4 py-2 rounded bg-blue-600 text-white disabled:opacity-50">
+//                         {loading ? 'Отправка…' : 'Зарегистрироваться'}
+//                     </button>
+//                     <button onClick={onClose} className="px-4 py-2 rounded border">Отмена</button>
+//                 </div>
+//             </div>
+//         </div>
+//     );
+// };
+//
+// export default RegisterModal;
 
-const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const pwdRe = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/;
+
+import React, { useState } from 'react';
 
 const RegisterModal = ({ open, onClose, onRegistered }) => {
     const [formData, setFormData] = useState({
-        firstName: '',
-        lastName: '',
         email: '',
+        username: '',
         password: '',
         confirmPassword: '',
+        firstName: '',
+        lastName: '',
+        phone: '',
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -27,49 +94,53 @@ const RegisterModal = ({ open, onClose, onRegistered }) => {
         if (error) setError('');
     };
 
-    const validate = () => {
-        const { firstName, lastName, email, password, confirmPassword } = formData;
-
-        if (!firstName || !lastName || !email || !password || !confirmPassword) {
-            setError('Заполните все поля');
-            return false;
-        }
-        if (!emailRe.test(email)) {
-            setError('Некорректный формат email');
-            return false;
-        }
-        if (password.length < 8 || password.length > 72) {
-            setError('Пароль должен быть от 8 до 72 символов');
-            return false;
-        }
-        if (!pwdRe.test(password)) {
-            setError('Пароль должен содержать строчные, заглавные буквы и цифры');
-            return false;
-        }
-        if (password !== confirmPassword) {
-            setError('Пароли не совпадают');
-            return false;
-        }
-        if (!acceptedTerms) {
-            setError('Необходимо принять условия пользовательского соглашения');
-            return false;
-        }
-        return true;
-    };
-
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!validate()) return;
+        setError('');
+
+        if (!acceptedTerms) {
+            setError('Необходимо принять условия пользовательского соглашения');
+            return;
+        }
+
+        const { email, username, password, confirmPassword } = formData;
+
+        if (!email || !username || !password || !confirmPassword) {
+            setError('Пожалуйста, заполните все обязательные поля');
+            return;
+        }
+
+        if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+            setError('Введите корректный email адрес');
+            return;
+        }
+
+        if (password.length < 6) {
+            setError('Пароль должен содержать минимум 6 символов');
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            setError('Пароли не совпадают');
+            return;
+        }
+
+        if (username.length < 3) {
+            setError('Имя пользователя должно содержать минимум 3 символа');
+            return;
+        }
 
         setLoading(true);
-        setError('');
         try {
-            await registerUser(formData);
-            onRegistered && onRegistered({
+            // Симуляция API вызова
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
+            onRegistered({
                 email: formData.email,
                 password: formData.password,
             });
-            onClose && onClose();
+
+            onClose();
         } catch (err) {
             setError(err.message || 'Ошибка регистрации');
         } finally {
@@ -79,23 +150,25 @@ const RegisterModal = ({ open, onClose, onRegistered }) => {
 
     return (
         <div className="fixed inset-0 z-50 overflow-y-auto">
-            <div className="flex items-center justify-center min-height-screen min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                {/* Фон с градиентом и размытием */}
                 <div
                     className="fixed inset-0 bg-gradient-to-br from-blue-500/20 via-purple-500/10 to-pink-500/20 backdrop-blur-sm"
                     onClick={onClose}
-                />
+                ></div>
 
                 <div className="inline-block align-bottom bg-white/95 backdrop-blur-md rounded-2xl px-4 pt-5 pb-4 text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full sm:p-8">
+                    {/* Закрывающий крестик */}
                     <button
                         onClick={onClose}
                         className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
-                        type="button"
                     >
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
 
+                    {/* Заголовок с логотипом */}
                     <div className="text-center mb-6">
                         <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl mb-4">
                             <span className="text-white text-2xl font-bold">Z</span>
@@ -120,6 +193,7 @@ const RegisterModal = ({ open, onClose, onRegistered }) => {
                     )}
 
                     <form onSubmit={handleSubmit} className="space-y-6">
+                        {/* Два колонки для имени и фамилии */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="relative">
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -170,6 +244,7 @@ const RegisterModal = ({ open, onClose, onRegistered }) => {
                             </div>
                         </div>
 
+                        {/* Поле email */}
                         <div className="relative">
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 <span className="flex items-center gap-2">
@@ -195,6 +270,58 @@ const RegisterModal = ({ open, onClose, onRegistered }) => {
                             </div>
                         </div>
 
+                        {/* Поле имени пользователя */}
+                        <div className="relative">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <span className="flex items-center gap-2">
+                                    <svg className="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                    </svg>
+                                    Имя пользователя *
+                                </span>
+                            </label>
+                            <div className={`relative rounded-lg border-2 transition-all ${focusedField === 'username' ? 'border-purple-500 ring-2 ring-purple-200' : 'border-gray-200'}`}>
+                                <input
+                                    type="text"
+                                    name="username"
+                                    value={formData.username}
+                                    onChange={handleChange}
+                                    onFocus={() => setFocusedField('username')}
+                                    onBlur={() => setFocusedField(null)}
+                                    className="w-full px-4 py-3 bg-transparent focus:outline-none"
+                                    placeholder="Придумайте никнейм"
+                                    disabled={loading}
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        {/* Поле телефона */}
+                        <div className="relative">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <span className="flex items-center gap-2">
+                                    <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                    </svg>
+                                    Телефон (необязательно)
+                                </span>
+                            </label>
+                            <div className={`relative rounded-lg border-2 transition-all ${focusedField === 'phone' ? 'border-green-500 ring-2 ring-green-200' : 'border-gray-200'}`}>
+                                <input
+                                    type="tel"
+                                    name="phone"
+                                    value={formData.phone}
+                                    onChange={handleChange}
+                                    onFocus={() => setFocusedField('phone')}
+                                    onBlur={() => setFocusedField(null)}
+                                    className="w-full px-4 py-3 bg-transparent focus:outline-none"
+                                    placeholder="+7 (999) 999-99-99"
+                                    disabled={loading}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Два колонки для пароля и подтверждения */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="relative">
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -207,14 +334,14 @@ const RegisterModal = ({ open, onClose, onRegistered }) => {
                                 </label>
                                 <div className={`relative rounded-lg border-2 transition-all ${focusedField === 'password' ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200'}`}>
                                     <input
-                                        type={showPassword ? 'text' : 'password'}
+                                        type={showPassword ? "text" : "password"}
                                         name="password"
                                         value={formData.password}
                                         onChange={handleChange}
                                         onFocus={() => setFocusedField('password')}
                                         onBlur={() => setFocusedField(null)}
                                         className="w-full px-4 py-3 bg-transparent focus:outline-none"
-                                        placeholder="Минимум 8 символов, A-z, 0-9"
+                                        placeholder="Минимум 6 символов"
                                         disabled={loading}
                                         required
                                     />
@@ -248,7 +375,7 @@ const RegisterModal = ({ open, onClose, onRegistered }) => {
                                 </label>
                                 <div className={`relative rounded-lg border-2 transition-all ${focusedField === 'confirmPassword' ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200'}`}>
                                     <input
-                                        type={showConfirmPassword ? 'text' : 'password'}
+                                        type={showConfirmPassword ? "text" : "password"}
                                         name="confirmPassword"
                                         value={formData.confirmPassword}
                                         onChange={handleChange}
@@ -279,6 +406,7 @@ const RegisterModal = ({ open, onClose, onRegistered }) => {
                             </div>
                         </div>
 
+                        {/* Чекбокс условий */}
                         <div className="flex items-start">
                             <input
                                 type="checkbox"
@@ -286,7 +414,6 @@ const RegisterModal = ({ open, onClose, onRegistered }) => {
                                 checked={acceptedTerms}
                                 onChange={(e) => setAcceptedTerms(e.target.checked)}
                                 className="mt-1 mr-3 w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-                                disabled={loading}
                             />
                             <label htmlFor="terms" className="text-sm text-gray-600">
                                 Я принимаю{' '}
@@ -300,21 +427,18 @@ const RegisterModal = ({ open, onClose, onRegistered }) => {
                             </label>
                         </div>
 
+                        {/* Кнопка регистрации */}
                         <button
                             type="submit"
-                            disabled={loading}
+                            disabled={loading || !acceptedTerms}
                             className="relative w-full px-6 py-4 rounded-xl font-semibold text-white transition-all duration-300 group overflow-hidden bg-gradient-to-r from-blue-500 to-purple-600 shadow-lg hover:shadow-xl hover:from-blue-600 hover:to-purple-700 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <span className="relative z-10 flex items-center justify-center gap-3">
                                 {loading ? (
                                     <>
                                         <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                            <path
-                                                className="opacity-75"
-                                                fill="currentColor"
-                                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                            />
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                         </svg>
                                         <span>Регистрация...</span>
                                     </>
@@ -327,28 +451,28 @@ const RegisterModal = ({ open, onClose, onRegistered }) => {
                                     </>
                                 )}
                             </span>
-                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 to-white/0 group-hover:from-white/10 group-hover:to-white/10 transition-all duration-300" />
-                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/5 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 to-white/0 group-hover:from-white/10 group-hover:to-white/10 transition-all duration-300"></div>
+                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/5 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
                         </button>
 
+                        {/* Разделитель */}
                         <div className="relative">
                             <div className="absolute inset-0 flex items-center">
-                                <div className="w-full border-t border-gray-200" />
+                                <div className="w-full border-t border-gray-200"></div>
                             </div>
                             <div className="relative flex justify-center text-sm">
-                                <span className="px-4 bg-white text-gray-500">
-                                    Или продолжите с
-                                </span>
+                                <span className="px-4 bg-white text-gray-500">Или продолжите с</span>
                             </div>
                         </div>
 
+                        {/* Альтернативные способы регистрации */}
                         <div className="grid grid-cols-2 gap-3">
                             <button
                                 type="button"
                                 className="px-4 py-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
                             >
                                 <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
                                 </svg>
                                 <span>Facebook</span>
                             </button>
@@ -357,19 +481,23 @@ const RegisterModal = ({ open, onClose, onRegistered }) => {
                                 className="px-4 py-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
                             >
                                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M20.283 10.356h-8.327v3.451h4.792c-.446 2.193-2.313 3.453-4.792 3.453a5.27 5.27 0 0 1-5.279-5.28 5.27 5.27 0 0 1 5.279-5.279c1.259 0 2.397.447 3.29 1.178l2.6-2.599c-1.584-1.381-3.615-2.233-5.89-2.233a8.908 8.908 0 0 0-8.934 8.934 8.907 8.907 0 0 0 8.934 8.934c4.467 0 8.529-3.249 8.529-8.934 0-.528-.081-1.097-.202-1.625z" />
+                                    <path d="M20.283 10.356h-8.327v3.451h4.792c-.446 2.193-2.313 3.453-4.792 3.453a5.27 5.27 0 0 1-5.279-5.28 5.27 5.27 0 0 1 5.279-5.279c1.259 0 2.397.447 3.29 1.178l2.6-2.599c-1.584-1.381-3.615-2.233-5.89-2.233a8.908 8.908 0 0 0-8.934 8.934 8.907 8.907 0 0 0 8.934 8.934c4.467 0 8.529-3.249 8.529-8.934 0-.528-.081-1.097-.202-1.625z"/>
                                 </svg>
                                 <span>Google</span>
                             </button>
                         </div>
 
+                        {/* Ссылка на вход */}
                         <div className="text-center pt-4 border-t border-gray-100">
                             <p className="text-gray-600">
                                 Уже есть аккаунт?{' '}
                                 <button
                                     type="button"
                                     className="text-blue-600 hover:text-blue-700 font-semibold hover:underline transition-colors"
-                                    onClick={onClose}
+                                    onClick={() => {
+                                        onClose();
+                                        // Здесь можно открыть модалку входа
+                                    }}
                                 >
                                     Войти
                                 </button>
@@ -379,6 +507,7 @@ const RegisterModal = ({ open, onClose, onRegistered }) => {
                 </div>
             </div>
 
+            {/* CSS для анимаций */}
             <style jsx>{`
                 @keyframes shake {
                     0%, 100% { transform: translateX(0); }

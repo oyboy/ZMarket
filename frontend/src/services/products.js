@@ -1,66 +1,143 @@
-export const PRODUCTS_API =
-    (process.env.REACT_APP_PRODUCTS_URL || 'http://localhost:8072/productservice/api/v1').replace(/\/+$/, '');
-
-export async function getProductById(productUUID) {
-    const res = await fetch(`${PRODUCTS_API}/products/${productUUID}`, { headers: { Accept: 'application/json' } });
-    if (res.status === 404) return null;
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.json();
-}
-
-export async function getProductAttachments(productUUID) {
-    const res = await fetch(`${PRODUCTS_API}/products/${productUUID}/attachments`, { headers: { Accept: 'application/json' } });
-    if (!res.ok) return [];
-    return res.json();
-}
-
-export const buildAttachmentUrl = (key) =>
-    key ? `${PRODUCTS_API}/products/attachments/download?key=${encodeURIComponent(key)}` : null;
+//export const PRODUCTS_API =
+//    process.env.REACT_APP_PRODUCTS_URL ||
+//    'http://localhost:8072/productservice/api/v1';
+//
+//export async function getProductById(productUUID) {
+//    const res = await fetch(`${PRODUCTS_API}/products/${productUUID}`, { headers: { Accept: 'application/json' } });
+//    if (res.status === 404) return null;
+//    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+//    return res.json();
+//}
+//
+//export async function getProductAttachments(productUUID) {
+//    const res = await fetch(`${PRODUCTS_API}/products/${productUUID}/attachments`, { headers: { Accept: 'application/json' } });
+//    if (!res.ok) return [];
+//    return res.json(); // ожидаем массив [{gridFsId|id,...}]
+//}
 
 
-export async function addProduct(payload, token) {
-    const res = await fetch(`${PRODUCTS_API}/products`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify(payload)
-    });
-    if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(`Failed to add product: ${res.status} ${txt}`);
+
+export const PRODUCTS_API = process.env.REACT_APP_PRODUCTS_URL || 'http://localhost:8072/productservice/api/v1';
+
+export const getProductById = async (id) => {
+    try {
+        const response = await fetch(`${PRODUCTS_API}/products/${id}`);
+        if (!response.ok) return null;
+        return await response.json();
+    } catch {
+        return null;
     }
-    return res.json();
-}
+};
 
-export async function updateProduct(uuid, payload, token) {
-    const res = await fetch(`${PRODUCTS_API}/products/${uuid}`, {
-        method: 'PATCH',
-        headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify(payload)
-    });
-    if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(`Failed to update product: ${res.status} ${txt}`);
+export const getProductAttachments = async (id) => {
+    try {
+        const response = await fetch(`${PRODUCTS_API}/products/${id}/attachments`);
+        if (!response.ok) return [];
+        return await response.json();
+    } catch {
+        return [];
     }
-    return res.json();
-}
+};
 
-export async function getProducts({ page = 0, size = 20, order = 'id', categoryId = null } = {}) {
-    const params = new URLSearchParams();
-    params.set('page', page);
-    params.set('size', size);
-    params.set('order', order);
-    if (categoryId != null) params.set('categoryId', categoryId);
-
-    const res = await fetch(`${PRODUCTS_API}/products?${params.toString()}`);
-    if (!res.ok) {
-        const txt = await res.text().catch(() => '');
-        throw new Error(txt || `HTTP ${res.status}`);
+export const getProducts = async () => {
+    try {
+        const response = await fetch(`${PRODUCTS_API}/products`);
+        if (!response.ok) return [];
+        return await response.json();
+    } catch {
+        return [];
     }
-    return res.json();
-}
+};
+
+export const createProduct = async (productData, token) => {
+    try {
+        const response = await fetch(`${PRODUCTS_API}/products`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(productData)
+        });
+        return await response.json();
+    } catch {
+        return null;
+    }
+};
+
+export const updateProduct = async (id, productData, token) => {
+    try {
+        const response = await fetch(`${PRODUCTS_API}/products/${id}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(productData)
+        });
+        return await response.json();
+    } catch {
+        return null;
+    }
+};
+
+export const deleteProduct = async (id, token) => {
+    try {
+        const response = await fetch(`${PRODUCTS_API}/products/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        return response.ok;
+    } catch {
+        return false;
+    }
+};
+
+export const uploadAttachment = async (productId, file, token) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+        const response = await fetch(`${PRODUCTS_API}/products/${productId}/attachments`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData
+        });
+        return await response.json();
+    } catch {
+        return null;
+    }
+};
+
+export const setMainAttachment = async (productId, attachmentId, token) => {
+    try {
+        const response = await fetch(`${PRODUCTS_API}/products/${productId}/attachments/${attachmentId}/main`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        return response.ok;
+    } catch {
+        return false;
+    }
+};
+
+export const deleteAttachment = async (productId, attachmentId, token) => {
+    try {
+        const response = await fetch(`${PRODUCTS_API}/products/${productId}/attachments/${attachmentId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        return response.ok;
+    } catch {
+        return false;
+    }
+};
+

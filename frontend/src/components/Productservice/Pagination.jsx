@@ -22,9 +22,11 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
 
     return (
         <div className="relative mt-10">
-            <div className="h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full mb-6" />
+            {/* Gradient divider like in header */}
+            <div className="h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full mb-6"></div>
 
             <div className="flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0">
+                {/* Page info */}
                 <div className="flex items-center space-x-2">
                     <div className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100">
                         <span className="text-sm font-medium text-gray-700 font-['Inter']">
@@ -33,7 +35,9 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
                     </div>
                 </div>
 
+                {/* Pagination controls */}
                 <div className="flex items-center space-x-2">
+                    {/* Previous button */}
                     <button
                         onClick={() => onPageChange(Math.max(0, currentPage - 1))}
                         disabled={currentPage === 0}
@@ -41,8 +45,8 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
                     >
                         {currentPage !== 0 ? (
                             <>
-                                <div className="absolute inset-0 bg-gradient-to-r from-gray-100 to-gray-200 group-hover:from-gray-200 group-hover:to-gray-300" />
-                                <div className="absolute inset-0 border border-gray-200 group-hover:border-gray-300 rounded-xl" />
+                                <div className="absolute inset-0 bg-gradient-to-r from-gray-100 to-gray-200 group-hover:from-gray-200 group-hover:to-gray-300"></div>
+                                <div className="absolute inset-0 border border-gray-200 group-hover:border-gray-300 rounded-xl"></div>
                                 <span className="relative z-10 flex items-center space-x-2 text-gray-700 font-['Inter']">
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -51,12 +55,14 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
                                 </span>
                             </>
                         ) : (
-                            <div className="absolute inset-0 bg-gradient-to-r from-gray-100 to-gray-200 rounded-xl" />
+                            <div className="absolute inset-0 bg-gradient-to-r from-gray-100 to-gray-200 rounded-xl"></div>
                         )}
                     </button>
 
+                    {/* Page numbers */}
                     <div className="flex items-center space-x-1">
                         {pagesToShow.map((pageNum, index) => {
+                            // Show ellipsis for gaps
                             if (index > 0 && pageNum !== pagesToShow[index - 1] + 1) {
                                 return (
                                     <React.Fragment key={`ellipsis-${index}`}>
@@ -64,7 +70,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
                                         <button
                                             key={pageNum}
                                             onClick={() => onPageChange(pageNum)}
-                                            className={`relative w-10 h-10 rounded-xl font-medium transition-all duration-300 group ${
+                                            className={`relative w-10 h-10 rounded-xl font-medium transition-all duration-300 ${
                                                 currentPage === pageNum
                                                     ? 'text-white shadow-lg transform scale-105'
                                                     : 'text-gray-700 hover:text-blue-600'
@@ -72,15 +78,15 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
                                         >
                                             {currentPage === pageNum ? (
                                                 <>
-                                                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl" />
-                                                    <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/5 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                                                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl"></div>
+                                                    <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/5 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
                                                     <span className="relative z-10 font-bold">{pageNum + 1}</span>
-                                                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full animate-pulse" />
+                                                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full animate-pulse"></div>
                                                 </>
                                             ) : (
                                                 <>
-                                                    <div className="absolute inset-0 bg-gradient-to-r from-gray-50 to-blue-50 opacity-0 group-hover:opacity-100 rounded-xl transition-opacity duration-300" />
-                                                    <div className="absolute inset-0 border border-gray-200 group-hover:border-blue-200 rounded-xl transition-colors duration-300" />
+                                                    <div className="absolute inset-0 bg-gradient-to-r from-gray-50 to-blue-50 opacity-0 group-hover:opacity-100 rounded-xl transition-opacity duration-300"></div>
+                                                    <div className="absolute inset-0 border border-gray-200 group-hover:border-blue-200 rounded-xl transition-colors duration-300"></div>
                                                     <span className="relative z-10">{pageNum + 1}</span>
                                                 </>
                                             )}
@@ -101,15 +107,15 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
                                 >
                                     {currentPage === pageNum ? (
                                         <>
-                                            <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl" />
-                                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/5 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                                            <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl"></div>
+                                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/5 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
                                             <span className="relative z-10 font-bold">{pageNum + 1}</span>
-                                            <div className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full animate-pulse" />
+                                            <div className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full animate-pulse"></div>
                                         </>
                                     ) : (
                                         <>
-                                            <div className="absolute inset-0 bg-gradient-to-r from-gray-50 to-blue-50 opacity-0 group-hover:opacity-100 rounded-xl transition-opacity duration-300" />
-                                            <div className="absolute inset-0 border border-gray-200 group-hover:border-blue-200 rounded-xl transition-colors duration-300" />
+                                            <div className="absolute inset-0 bg-gradient-to-r from-gray-50 to-blue-50 opacity-0 group-hover:opacity-100 rounded-xl transition-opacity duration-300"></div>
+                                            <div className="absolute inset-0 border border-gray-200 group-hover:border-blue-200 rounded-xl transition-colors duration-300"></div>
                                             <span className="relative z-10">{pageNum + 1}</span>
                                         </>
                                     )}
@@ -118,6 +124,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
                         })}
                     </div>
 
+                    {/* Next button */}
                     <button
                         onClick={() => onPageChange(Math.min(totalPages - 1, currentPage + 1))}
                         disabled={currentPage === totalPages - 1}
@@ -125,8 +132,8 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
                     >
                         {currentPage !== totalPages - 1 ? (
                             <>
-                                <div className="absolute inset-0 bg-gradient-to-r from-gray-100 to-gray-200 group-hover:from-gray-200 group-hover:to-gray-300" />
-                                <div className="absolute inset-0 border border-gray-200 group-hover:border-gray-300 rounded-xl" />
+                                <div className="absolute inset-0 bg-gradient-to-r from-gray-100 to-gray-200 group-hover:from-gray-200 group-hover:to-gray-300"></div>
+                                <div className="absolute inset-0 border border-gray-200 group-hover:border-gray-300 rounded-xl"></div>
                                 <span className="relative z-10 flex items-center space-x-2 text-gray-700 font-['Inter']">
                                     <span>Вперёд</span>
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -135,11 +142,12 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
                                 </span>
                             </>
                         ) : (
-                            <div className="absolute inset-0 bg-gradient-to-r from-gray-100 to-gray-200 rounded-xl" />
+                            <div className="absolute inset-0 bg-gradient-to-r from-gray-100 to-gray-200 rounded-xl"></div>
                         )}
                     </button>
                 </div>
 
+                {/* Quick navigation */}
                 <div className="flex items-center space-x-2">
                     <div className="hidden md:flex items-center space-x-2">
                         <span className="text-sm text-gray-600 font-['Inter']">Перейти:</span>
@@ -150,8 +158,8 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
                                 max={totalPages}
                                 defaultValue={currentPage + 1}
                                 onChange={(e) => {
-                                    const page = parseInt(e.target.value, 10) - 1;
-                                    if (!Number.isNaN(page) && page >= 0 && page < totalPages) {
+                                    const page = parseInt(e.target.value) - 1;
+                                    if (page >= 0 && page < totalPages) {
                                         onPageChange(page);
                                     }
                                 }}
@@ -167,6 +175,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
                 </div>
             </div>
 
+            {/* Mobile view for page selection */}
             <div className="mt-6 md:hidden">
                 <div className="flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-100">
                     <span className="text-sm font-medium text-gray-700 font-['Inter']">
@@ -174,7 +183,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
                     </span>
                     <select
                         value={currentPage}
-                        onChange={(e) => onPageChange(parseInt(e.target.value, 10))}
+                        onChange={(e) => onPageChange(parseInt(e.target.value))}
                         className="px-3 py-1.5 border-2 border-blue-200 rounded-lg bg-white text-blue-600 font-medium focus:outline-none focus:border-blue-500 font-['Inter']"
                     >
                         {Array.from({ length: totalPages }, (_, i) => (
@@ -186,12 +195,13 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
                 </div>
             </div>
 
+            {/* Progress bar */}
             <div className="mt-6">
                 <div className="w-full h-2 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full overflow-hidden">
                     <div
                         className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full transition-all duration-500 ease-out"
                         style={{ width: `${((currentPage + 1) / totalPages) * 100}%` }}
-                    />
+                    ></div>
                 </div>
                 <div className="flex justify-between text-xs text-gray-500 mt-2 font-['Inter']">
                     <span>Начало</span>
