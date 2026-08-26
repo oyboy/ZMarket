@@ -1,0 +1,1 @@
+{"uuid":"758f2bb3-2c7b-44f6-993e-837ad4accd98","name":"updateStockFromKafka should delegate to repository","children":["32294f83-839c-4203-b2b5-c3441ef716a3"],"befores":[],"afters":[],"start":1787787901016,"stop":1787787901020}

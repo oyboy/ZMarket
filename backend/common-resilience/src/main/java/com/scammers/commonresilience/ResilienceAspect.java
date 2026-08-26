@@ -14,13 +14,14 @@ import java.lang.reflect.Method;
 import java.util.function.Supplier;
 
 @Aspect
-@Component
-@RequiredArgsConstructor
 @Slf4j
 public class ResilienceAspect {
 
     private final ResilienceDecorator decorator;
 
+    public ResilienceAspect(ResilienceDecorator decorator) {
+        this.decorator = decorator;
+    }
     @Around("@within(com.scammers.commonresilience.Resilient) || @annotation(com.scammers.commonresilience.Resilient)")
     public Object around(ProceedingJoinPoint pjp) throws Throwable {
         log.debug("ResilienceAspect: around called for {}", pjp.getSignature());

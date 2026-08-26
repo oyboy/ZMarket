@@ -1,0 +1,36 @@
+services:
+  warehouse-service:
+    url: http://localhost:1
+  ratings-aggregator:
+    url: http://localhost:1
+  recommendation-service:
+    url: http://localhost:1
+
+minio:
+  url: http://localhost:1
+  external-url: http://localhost:1
+  access-key: test
+  secret-key: testtest
+  bucket-name: test-bucket
+
+spring:
+  kafka:
+    bootstrap-servers: localhost:9092
+    listener:
+      auto-startup: false
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://localhost:8074/realms/master/protocol/openid-connect/certs
+
+eureka:
+  client:
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false
+
+watchdog:
+  interval:
+    ms: 3600000

@@ -17,12 +17,19 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.EnableAspectJAutoProxy;
 
 @Configuration
 @EnableConfigurationProperties(ResilienceProperties.class)
 @RequiredArgsConstructor
+@EnableAspectJAutoProxy
 public class ResilienceConfig {
     private final ResilienceProperties props;
+
+    @Bean
+    public ResilienceAspect resilienceAspect(ResilienceDecorator decorator) {
+        return new ResilienceAspect(decorator);
+    }
 
     @Bean
     public CircuitBreakerRegistry circuitBreakerRegistry(MeterRegistry meterRegistry) {

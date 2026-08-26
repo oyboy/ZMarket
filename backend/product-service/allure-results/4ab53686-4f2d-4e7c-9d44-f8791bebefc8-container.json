@@ -1,0 +1,1 @@
+{"uuid":"4ab53686-4f2d-4e7c-9d44-f8791bebefc8","name":"addProduct with negative price should throw IllegalArgumentException","children":["9e763cb6-8e0c-447a-a94b-6f3d848b02b3"],"befores":[],"afters":[],"start":1787787571609,"stop":1787787571615}
