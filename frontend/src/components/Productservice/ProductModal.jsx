@@ -1,4 +1,58 @@
-import React from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import { getCategoryTree } from '../../services/categories';
+
+const normalizeName = (node) =>
+    node.name || node.title || `Категория ${node.id}`;
+
+const buildPathLabel = (path) =>
+    path.map((p) => p.name).join(' / ');
+
+const findPathById = (nodes, id, acc = []) => {
+    if (!Array.isArray(nodes)) return null;
+    for (const n of nodes) {
+        const name = normalizeName(n);
+        const next = [...acc, { id: n.id, name }];
+        if (n.id === id) return next;
+        if (Array.isArray(n.children) && n.children.length) {
+            const found = findPathById(n.children, id, next);
+            if (found) return found;
+        }
+    }
+    return null;
+};
+
+const flattenForSearch = (nodes, accPath = []) => {
+    const out = [];
+    if (!Array.isArray(nodes)) return out;
+    for (const n of nodes) {
+        const name = normalizeName(n);
+        const nextPath = [...accPath, { id: n.id, name }];
+        out.push({
+            id: n.id,
+            label: buildPathLabel(nextPath),
+            path: nextPath,
+        });
+        if (Array.isArray(n.children) && n.children.length) {
+            out.push(...flattenForSearch(n.children, nextPath));
+        }
+    }
+    return out;
+};
+
+const CategoryPickerModal = ({ open, tree, value, onClose, onSelect }) => {
+    const [path, setPath] = useState([]);
+    const [search, setSearch] = useState('');
+
+    useEffect(() => {
+        if (!open) return;
+        setSearch('');
+        if (!Array.isArray(tree) || tree.length === 0 || !value) {
+            setPath([]);
+            return;
+        }
+        const p = findPathById(tree, value);
+        setPath(p || []);
+    }, [open, value, tree]);
 
 const ProductModal = ({ open, isEdit, loading, formData, onChange, onSubmit, onClose }) => {
     if (!open) return null;
@@ -7,6 +61,49 @@ const ProductModal = ({ open, isEdit, loading, formData, onChange, onSubmit, onC
         e.preventDefault();
         onSubmit();
     };
+
+    const handleAttrChange = (i, field, val) => {
+        setAttrRows((prev) => {
+            const next = [...prev];
+            next[i] = { ...next[i], [field]: val };
+            return next;
+        });
+    };
+
+    const addAttrRow = () => setAttrRows((prev) => [...prev, emptyAttrRow()]);
+    const removeAttrRow = (i) =>
+        setAttrRows((prev) => prev.filter((_, idx) => idx !== i));
+
+    const canSubmit =
+        !loading &&
+        (formData?.title || '').trim().length > 0 &&
+        (formData?.description || '').trim().length > 0 &&
+        Number(formData?.price) > 0 &&
+        Number(formData?.stock ?? 0) >= 0;
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        if (!canSubmit) return;
+        onSubmit && onSubmit();
+    };
+
+    const selectedCategoryLabel = (() => {
+        if (!formData?.categoryId) return 'Не выбрана';
+        if (
+            !categoriesTree ||
+            !Array.isArray(categoriesTree) ||
+            categoriesTree.length === 0
+        ) {
+            return `ID: ${formData.categoryId}`;
+        }
+        const path = findPathById(
+            categoriesTree,
+            Number(formData.categoryId)
+        );
+        return path ? buildPathLabel(path) : `ID: ${formData.categoryId}`;
+    })();
+
+    if (!open) return null;
 
     return (
         <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -99,7 +196,7 @@ const ProductModal = ({ open, isEdit, loading, formData, onChange, onSubmit, onC
                                     </label>
                                     <textarea
                                         name="description"
-                                        value={formData.description}
+                                        value={formData.description || ''}
                                         onChange={onChange}
                                         rows={4}
                                         required
@@ -271,6 +368,19 @@ const ProductModal = ({ open, isEdit, loading, formData, onChange, onSubmit, onC
                     </div>
                 </div>
             </div>
+
+            <CategoryPickerModal
+                open={catPickerOpen}
+                tree={categoriesTree || []}
+                value={formData.categoryId ? Number(formData.categoryId) : null}
+                onClose={() => setCatPickerOpen(false)}
+                onSelect={(id) => {
+                    onChange &&
+                    onChange({
+                        target: { name: 'categoryId', value: id },
+                    });
+                }}
+            />
         </div>
     );
 };

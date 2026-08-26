@@ -21,7 +21,11 @@ public class RatingApplierConsumer {
     private final ReviewRepository reviewRepository;
     private final RatingApplierRepository ratingApplierRepository;
 
-    @KafkaListener(topics = TOPIC_APPLY_REVIEW, groupId = GROUP_ID)
+    @KafkaListener(
+            topics = TOPIC_APPLY_REVIEW,
+            groupId = GROUP_ID,
+            containerFactory = "ratingsResultsStringKafkaListenerContainerFactory"
+    )
     @Transactional
     public void listen(String message) {
         try {

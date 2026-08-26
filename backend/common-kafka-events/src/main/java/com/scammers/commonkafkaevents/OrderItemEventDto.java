@@ -9,5 +9,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class OrderItemEventDto {
     private String productId;
+    private String sellerId;
     private int quantity;
 }

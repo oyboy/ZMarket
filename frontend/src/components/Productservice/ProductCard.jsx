@@ -11,10 +11,17 @@ const PRODUCTS_API =
     process.env.REACT_APP_PRODUCTS_URL ||
     'http://localhost:8072/productservice/api/v1';
 
-const extractAttachmentIds = (p) => {
+const Placeholder = () => (
+    <svg className="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+    </svg>
+);
+
+const extractAttachmentKeys = (p) => {
     if (Array.isArray(p?.attachments) && p.attachments.length) {
-        return p.attachments.map((a) => a?.gridFsId || a?.id || a).filter(Boolean);
+        return p.attachments.map(a => a?.objectKey || a?.key || a).filter(Boolean);
     }
+    if (p?.mainAttachmentKey) return [p.mainAttachmentKey];
     if (p?.mainAttachmentId) return [p.mainAttachmentId];
     return [];
 };
@@ -63,7 +70,7 @@ const ProductCard = ({
                          onDeleteAttachment,
                          stockInfo,
                          onOpenStock
-}) => {
+                     }) => {
     const requireAuth = typeof onRequireAuth === 'function' ? onRequireAuth : () => alert('Нужно войти');
 
     const initialAvg = getRatingValue(product);
@@ -81,7 +88,6 @@ const ProductCard = ({
     const roles = useMemo(() => (token ? getRolesFromToken(token) : []), [token]);
     const isUser = roles.includes('USER') || roles.includes('ROLE_USER');
 
-
     const productId = useMemo(() => product.productUUID || product.id, [product]);
     const navigate = useNavigate();
 
@@ -97,20 +103,22 @@ const ProductCard = ({
     const [currentIdx, setCurrentIdx] = useState(0);
 
     const [hostRef, inView] = useInViewportOnce(0.2);
-    const imageId = attachmentIds[currentIdx];
-    const imgSrc = inView && imageId ? `${PRODUCTS_API}/products/${imageId}/attachments-fs` : null;
+    const imageKey = attachmentKeys[currentIdx];
+    const imgSrc = inView && imageKey
+        ? `${PRODUCTS_API}/products/attachments/download?key=${encodeURIComponent(imageKey)}`
+        : null;
 
-    const fetchAllIds = useCallback(async () => {
+    const fetchAllKeys = useCallback(async () => {
         if (fetchedAll || !productId) return false;
         try {
             const res = await fetch(`${PRODUCTS_API}/products/${productId}/attachments`);
             if (!res.ok) return false;
             const list = await res.json();
-            const ids = Array.isArray(list) ? list.map(a => a?.gridFsId || a?.id).filter(Boolean) : [];
-            if (ids.length) {
-                setAttachmentIds(ids);
+            const keys = Array.isArray(list) ? list.map(a => a?.objectKey || a?.key).filter(Boolean) : [];
+            if (keys.length) {
+                setAttachmentKeys(keys);
                 setFetchedAll(true);
-                setCurrentIdx(i => Math.min(i, ids.length - 1));
+                setCurrentIdx(0);
                 return true;
             }
         } catch { }
@@ -126,27 +134,29 @@ const ProductCard = ({
             if (!cancelled && !ok) { }
         })();
         return () => { cancelled = true; };
-    }, [inView, attachmentIds.length, fetchAllIds]);
+    }, [inView, fetchedAll, attachmentKeys.length, fetchAllKeys]);
 
     const goPrev = useCallback(async (e) => {
         e?.stopPropagation?.();
-        if (!fetchedAll && attachmentIds.length <= 1) {
-            const ok = await fetchAllIds();
-            if (!ok || attachmentIds.length <= 1) return;
+        e?.preventDefault?.();
+        if (!fetchedAll && attachmentKeys.length <= 1) {
+            const ok = await fetchAllKeys();
+            if (!ok || attachmentKeys.length <= 1) return;
         }
-        setCurrentIdx(i => (i - 1 + attachmentIds.length) % attachmentIds.length);
-    }, [fetchedAll, attachmentIds.length, fetchAllIds]);
+        setCurrentIdx(i => (i - 1 + attachmentKeys.length) % attachmentKeys.length);
+    }, [fetchedAll, attachmentKeys.length, fetchAllKeys]);
 
     const goNext = useCallback(async (e) => {
         e?.stopPropagation?.();
-        if (!fetchedAll && attachmentIds.length <= 1) {
-            const ok = await fetchAllIds();
-            if (!ok || attachmentIds.length <= 1) return;
+        e?.preventDefault?.();
+        if (!fetchedAll && attachmentKeys.length <= 1) {
+            const ok = await fetchAllKeys();
+            if (!ok || attachmentKeys.length <= 1) return;
         }
-        setCurrentIdx(i => (i + 1) % attachmentIds.length);
-    }, [fetchedAll, attachmentIds.length, fetchAllIds]);
+        setCurrentIdx(i => (i + 1) % attachmentKeys.length);
+    }, [fetchedAll, attachmentKeys.length, fetchAllKeys]);
 
-    const hasCarousel = attachmentIds.length > 1;
+    const hasCarousel = attachmentKeys.length > 1;
 
     const uploadInputId = `upload-${productId}`;
     const handleFileChange = (e) => {
@@ -156,6 +166,7 @@ const ProductCard = ({
     };
 
     const toast = useToast();
+    const [actLoading, setActLoading] = useState(false);
 
     const handleAddToCart = async () => {
         const token = localStorage.getItem('jwtToken');
@@ -168,8 +179,12 @@ const ProductCard = ({
         }
     };
 
-    const handleSetMain = async () => {
-        if (!imageId || !onSetMainAttachment) return;
+    const handleSetMain = async (e) => {
+        e?.stopPropagation?.();
+        e?.preventDefault?.();
+        if (!imageKey || !onSetMainAttachment || actLoading) return;
+
+        setActLoading(true);
         try {
             await onSetMainAttachment(product, imageId);
             setAttachmentIds(prev => [imageId, ...prev.filter(id => id !== imageId)]);
@@ -177,8 +192,12 @@ const ProductCard = ({
         } catch { }
     };
 
-    const handleDelete = async () => {
-        if (!imageId || !onDeleteAttachment) return;
+    const handleDelete = async (e) => {
+        e?.stopPropagation?.();
+        e?.preventDefault?.();
+        if (!imageKey || !onDeleteAttachment || actLoading) return;
+
+        setActLoading(true);
         try {
             await onDeleteAttachment(product, imageId);
             setAttachmentIds(prev => prev.filter(id => id !== imageId));
@@ -187,7 +206,6 @@ const ProductCard = ({
     };
 
     const [ratingLoadedOnce, setRatingLoadedOnce] = useState(false);
-
     const loadRating = useCallback(async () => {
         if (!productId) return;
         try {
@@ -205,9 +223,7 @@ const ProductCard = ({
     }, [productId]);
 
     useEffect(() => {
-        if (inView && !ratingLoadedOnce) {
-            loadRating();
-        }
+        if (inView && !ratingLoadedOnce) loadRating();
     }, [inView, ratingLoadedOnce, loadRating]);
 
     return (
@@ -411,46 +427,28 @@ const ProductCard = ({
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 mt-2">
-                    {canManage && (
-                        <button
-                            onClick={() => onEdit && onEdit(product)}
-                            className="px-3 py-1.5 rounded-lg text-sm font-medium bg-green-600 hover:bg-green-700 text-white shrink-0"
-                        >
+                    {canManage && onEdit && (
+                        <button onClick={() => onEdit(product)} className="px-3 py-1.5 rounded-lg text-sm font-medium bg-green-600 hover:bg-green-700 text-white shrink-0">
                             Редактировать
                         </button>
                     )}
                     {canManage && onOpenStock && (
-                        <button
-                            onClick={() => onOpenStock(product)}
-                            className="px-3 py-1.5 rounded-lg text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white shrink-0"
-                        >
+                        <button onClick={() => onOpenStock(product)} className="px-3 py-1.5 rounded-lg text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white shrink-0">
                             Изменить количество
                         </button>
                     )}
                     {showUpload && (
                         <>
-                            <input
-                                id={uploadInputId}
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                onChange={handleFileChange}
-                            />
-                            <label
-                                htmlFor={uploadInputId}
-                                className="cursor-pointer px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-800 shrink-0"
-                            >
+                            <input id={uploadInputId} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                            <label htmlFor={uploadInputId} className="cursor-pointer px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-800 shrink-0">
                                 Загрузить фото
                             </label>
                         </>
                     )}
-
                     {canManage && stockInfo && (
                         <div className="basis-full text-xs text-gray-600 pt-1">
-                            На складе: <span className="font-medium">{stockInfo.available}</span>
-                            {typeof stockInfo.quantityReserved === 'number' && (
-                                <span className="ml-2 text-gray-500">резерв: {stockInfo.quantityReserved}</span>
-                            )}
+                            На складе: <span className="font-medium">{product.stock}</span>
+                            {typeof stockInfo.quantityReserved === 'number' && <span className="ml-2 text-gray-500">резерв: {stockInfo.quantityReserved}</span>}
                         </div>
                     )}
                 </div>

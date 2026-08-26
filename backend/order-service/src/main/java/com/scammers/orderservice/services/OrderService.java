@@ -114,7 +114,7 @@ public class OrderService {
         order.setStatus(OrderStatus.PAID);
         orderRepository.save(order);
 
-        OrderPaidEvent event = new OrderPaidEvent(orderId, mapToEventItems(order.getItems()));
+        OrderPaidEvent event = new OrderPaidEvent(orderId, order.getUserId(), mapToEventItems(order.getItems()));
         kafkaTemplate.send("order-paid-events", event);
     }
 
@@ -236,6 +236,7 @@ public class OrderService {
         return items.stream()
                 .map(i -> new OrderItemEventDto(
                         i.getProductId().toString(),
+                        i.getSellerId().toString(),
                         i.getQuantity()
                 ))
                 .toList();

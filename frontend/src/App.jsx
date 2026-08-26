@@ -261,13 +261,6 @@ import RegisterModal from './components/Productservice/Auth/RegisterModal';
 
 
 import { getRolesFromToken } from './utils/jwt';
-
-import WarehouseMovements from './components/pages/seller/WarehouseMovements';
-
-import OrdersPage from './components/pages/buyer/OrdersPage';
-import OrderDetails from './components/pages/buyer/OrderDetails';
-import SellerOrders from './components/pages/seller/SellerOrders';
-
 import {
     TOKEN_URL,
     CLIENT_ID,
@@ -275,12 +268,18 @@ import {
     logout,
     scheduleAutoRefresh,
 } from './services/http';
-import {ToastProvider} from "./components/Shared/ToastProvider";
+import { ToastProvider } from './components/Shared/ToastProvider';
+
+const SimpleWaveBackground = () => (
+    <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-purple-50 opacity-70" />
+        <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-blue-100/30 to-transparent" />
+    </div>
+);
 
 export default function App() {
     const [token, setToken] = useState(localStorage.getItem('jwtToken') || null);
     const [showLoginModal, setShowLoginModal] = useState(false);
-    const [loginData, setLoginData] = useState({ username: '', password: '' });
     const [loginLoading, setLoginLoading] = useState(false);
     const [showRegisterModal, setShowRegisterModal] = useState(false);
     const [showBecomeSeller, setShowBecomeSeller] = useState(false);
@@ -422,36 +421,82 @@ export default function App() {
                     element={<ProductDetails onRequireAuth={openLogin} />}
                 />
 
-                {/* CART */}
-                <Route path="/cart" element={<CartPage onRequireAuth={openLogin} />} />
+                <main className="flex-1 relative z-10">
+                    <Routes>
+                        <Route
+                            path="/"
+                            element={<Marketplace token={token} onRequireAuth={openLogin} />}
+                        />
+                        <Route
+                            path="/product/:uuid"
+                            element={<ProductDetails onRequireAuth={openLogin} />}
+                        />
 
-                {/*Orders*/}
-                <Route path="/orders" element={<OrdersPage onRequireAuth={openLogin} />} />
-                <Route path="/orders/:orderId" element={<OrderDetails />} />
+                        <Route
+                            path="/cart"
+                            element={<CartPage onRequireAuth={openLogin} />}
+                        />
 
-                {/* SELLER */}
-                <Route
-                    element={
-                        <RequireRole anyOf={['SELLER', 'ROLE_SELLER', 'ADMIN', 'ROLE_ADMIN']} />
+                        <Route
+                            path="/orders"
+                            element={<OrdersPage onRequireAuth={openLogin} />}
+                        />
+                        <Route
+                            path="/orders/:orderId"
+                            element={<OrderDetails />}
+                        />
+
+                        <Route
+                            element={
+                                <RequireRole anyOf={['SELLER', 'ROLE_SELLER', 'ADMIN', 'ROLE_ADMIN']} />
+                            }
+                        >
+                            <Route path="/seller" element={<SellerDashboard />} />
+                            <Route path="/seller/products" element={<Products />} />
+                            <Route path="/seller/warehouse" element={<WarehouseMovements />} />
+                            <Route path="/seller/orders" element={<SellerOrders />} />
+                            <Route path="/seller/stats" element={<SellerStats />} />
+                        </Route>
+
+                        <Route element={<RequireRole anyOf={['ADMIN', 'ROLE_ADMIN']} />}>
+                            <Route path="/admin" element={<AdminDashboard />} />
+                            <Route
+                                path="/admin/pending-sellers"
+                                element={<AdminPendingSellers />}
+                            />
+                            <Route
+                                path="/admin/rejected-sellers"
+                                element={<AdminRejectedSellers />}
+                            />
+                            <Route
+                                path="/admin/categories"
+                                element={<AdminCategories />}
+                            />
+                        </Route>
+
+                        <Route
+                            path="*"
+                            element={<Marketplace token={token} onRequireAuth={openLogin} />}
+                        />
+                    </Routes>
+                </main>
+
+                <Footer />
+
+                <LoginModal
+                    open={showLoginModal}
+                    loading={loginLoading}
+                    onLogin={handleLogin}
+                    onClose={() => setShowLoginModal(false)}
+                    onOpenRegister={openRegister}
+                />
+
+                <RegisterModal
+                    open={showRegisterModal}
+                    onClose={() => setShowRegisterModal(false)}
+                    onRegistered={({ email, password }) =>
+                        handleLoginWith(email, password)
                     }
-                >
-                    <Route path="/seller" element={<SellerDashboard />} />
-                    <Route path="/seller/products" element={<Products />} />
-                    <Route path="/seller/warehouse" element={<WarehouseMovements />} /> {}
-                    <Route path="/seller/orders" element={<SellerOrders />} />
-                </Route>
-
-                {/* ADMIN */}
-                <Route element={<RequireRole anyOf={['ADMIN', 'ROLE_ADMIN']} />}>
-                    <Route path="/admin" element={<AdminDashboard />} />
-                    <Route path="/admin/pending-sellers" element={<AdminPendingSellers />} />
-                    <Route path="/admin/rejected-sellers" element={<AdminRejectedSellers />} />
-                </Route>
-
-                {/* FALLBACK */}
-                <Route
-                    path="*"
-                    element={<Marketplace token={token} onRequireAuth={openLogin} />}
                 />
             </Routes>
 

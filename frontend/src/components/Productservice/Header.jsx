@@ -52,6 +52,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { getRolesFromToken } from '../../utils/jwt';
+import CatalogButton from '../Productservice/CatalogButton';
 
 export default function Header({
     token,
@@ -89,16 +90,36 @@ export default function Header({
     ];
 
     return (
-        <header className="bg-white border-b">
-            <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <Link to="/" className="font-bold text-lg">Marketplace</Link>
-                    <Link to="/" className="text-gray-700 hover:text-gray-900">Каталог</Link>
-                    {isSeller && <Link to="/seller" className="text-gray-700 hover:text-gray-900">Кабинет продавца</Link>}
-                    {isAdmin && <Link to="/admin" className="text-gray-700 hover:text-gray-900">Админка</Link>}
-                    {isBuyer && <Link to="/cart" className="text-gray-700 hover:text-gray-900">Корзина</Link>}
-                    {isBuyer && <Link to="/orders" className="text-gray-700 hover:text-gray-900">Мои заказы</Link>}
-                </div>
+        <header
+            className={`sticky top-0 z-50 transition-all duration-300 ${
+                scrolled
+                    ? 'bg-white/95 backdrop-blur-md shadow-lg'
+                    : 'bg-gradient-to-r from-blue-50 to-indigo-50'
+            }`}
+        >
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="flex items-center justify-between h-16">
+                    {/* Логотип + CatalogButton + навигация */}
+                    <div className="flex items-center">
+                        {/* Логотип (дизайн ZMarket) */}
+                        <Link to="/" className="flex items-center space-x-3 group">
+                            <div className="relative">
+                                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center transform group-hover:rotate-12 transition-transform duration-300 shadow-lg">
+                                    <span className="text-white font-bold text-lg">
+                                        Z
+                                    </span>
+                                </div>
+                                <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full animate-pulse"></div>
+                            </div>
+                            <div>
+                                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                                    ZMarket
+                                </h1>
+                                <p className="text-xs text-gray-500 ">
+                                    Гойда
+                                </p>
+                            </div>
+                        </Link>
 
                     {/* Кнопки пользователя - ИЗМЕНЕНО: иконка для кнопки "Войти" */}
                     <div className="flex items-center space-x-3">

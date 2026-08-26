@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Filters from './Filters';
 import ProductsGrid from './ProductsGrid';
 import Pagination from './Pagination';
@@ -27,6 +28,13 @@ const Marketplace = ({ token, onRequireAuth }) => {
         stock: 0,
     });
 
+    const [filterFlags, setFilterFlags] = useState({
+        maxPrice: null,
+        minRating: null,
+        onlyInStock: false,
+        onlyDiscount: false,
+    });
+
     const [userRoles, setUserRoles] = useState([]);
 
     const pageSize = 20;
@@ -42,10 +50,21 @@ const Marketplace = ({ token, onRequireAuth }) => {
             ['SELLER', 'ROLE_SELLER', 'ADMIN', 'ROLE_ADMIN'].includes(role)
         );
 
-    const fetchProducts = async () => {
+    const [searchParams] = useSearchParams();
+    const categoryIdParam = searchParams.get('categoryId');
+    const categoryId = categoryIdParam ? Number(categoryIdParam) : null;
+
+    const fetchProducts = async (catId) => {
         setLoading(true);
         try {
-            const data = await apiFetch(`${PRODUCTS_URL}/products?page=0&size=100`);
+            const params = new URLSearchParams();
+            params.set('page', 0);
+            params.set('size', 100);
+            if (catId != null) {
+                params.set('categoryId', catId);
+            }
+
+            const data = await apiFetch(`${PRODUCTS_URL}/products?${params.toString()}`);
             setProducts(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error('Error fetching products:', error);
@@ -60,14 +79,14 @@ const Marketplace = ({ token, onRequireAuth }) => {
     }, [token]);
 
     useEffect(() => {
-        fetchProducts();
-    }, [token]);
+        fetchProducts(categoryId);
+    }, [token, categoryId]);
 
     useEffect(() => {
         const filtered = products.filter(
             (p) =>
-                p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                p.description.toLowerCase().includes(searchTerm.toLowerCase())
+                (p.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (p.description || '').toLowerCase().includes(searchTerm.toLowerCase())
         );
         setTotalPages(Math.ceil(filtered.length / pageSize) || 0);
         setCurrentPage(0);
@@ -77,21 +96,56 @@ const Marketplace = ({ token, onRequireAuth }) => {
         let filtered = [...products];
 
         if (searchTerm.trim()) {
+            const q = searchTerm.toLowerCase();
             filtered = filtered.filter(
                 (p) =>
-                    p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    p.description.toLowerCase().includes(searchTerm.toLowerCase())
+                    (p.title || '').toLowerCase().includes(q) ||
+                    (p.description || '').toLowerCase().includes(q)
+            );
+        }
+
+        if (filterFlags.maxPrice != null) {
+            filtered = filtered.filter(
+                (p) => Number(p.price || 0) <= filterFlags.maxPrice
+            );
+        }
+
+        if (filterFlags.minRating != null) {
+            filtered = filtered.filter((p) => {
+                const r =
+                    p.rating ??
+                    p.ratingAverage ??
+                    p.avgRating ??
+                    p.averageRating ??
+                    0;
+                return Number(r) >= filterFlags.minRating;
+            });
+        }
+
+        if (filterFlags.onlyInStock) {
+            filtered = filtered.filter((p) => Number(p.stock || 0) > 0);
+        }
+
+        if (filterFlags.onlyDiscount) {
+            filtered = filtered.filter(
+                (p) => p.oldPrice && Number(p.oldPrice) > Number(p.price || 0)
             );
         }
 
         filtered.sort((a, b) => {
             switch (sortBy) {
                 case 'price':
-                    return a.price - b.price;
-                case 'rating':
-                    return (b.rating || 0) - (a.rating || 0);
+                    return (a.price || 0) - (b.price || 0);
+                case 'rating': {
+                    const ra =
+                        a.rating ?? a.ratingAverage ?? a.avgRating ?? a.averageRating ?? 0;
+                    const rb =
+                        b.rating ?? b.ratingAverage ?? b.avgRating ?? b.averageRating ?? 0;
+                    return Number(rb) - Number(ra);
+                }
                 case 'title':
-                    return a.title.localeCompare(b.title);
+                    return (a.title || '').localeCompare(b.title || '');
+                case 'id':
                 default:
                     return (a.id || 0) - (b.id || 0);
             }
@@ -131,7 +185,7 @@ const Marketplace = ({ token, onRequireAuth }) => {
                 body: JSON.stringify(formData),
             });
             if (data !== null) {
-                await fetchProducts();
+                await fetchProducts(categoryId);
                 setShowProductModal(false);
             }
         } catch (error) {
@@ -166,11 +220,20 @@ const Marketplace = ({ token, onRequireAuth }) => {
                 description: product.description,
                 price: product.price,
                 stock: product.stock,
+                categoryId: product.categoryId ?? '',
+                attributes: product.attributes || {},
             });
         } else {
             setIsEdit(false);
             setCurrentProduct(null);
-            setFormData({ title: '', description: '', price: 0, stock: 0 });
+            setFormData({
+                title: '',
+                description: '',
+                price: 0,
+                stock: 0,
+                categoryId: '',
+                attributes: {},
+            });
         }
 
         setShowProductModal(true);
@@ -186,6 +249,8 @@ const Marketplace = ({ token, onRequireAuth }) => {
                     setSearchTerm={setSearchTerm}
                     sortBy={sortBy}
                     setSortBy={setSortBy}
+                    filterFlags={filterFlags}
+                    setFilterFlags={setFilterFlags}
                 />
 
                 {loading ? (
