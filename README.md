@@ -9,7 +9,7 @@ CDC через Debezium, CQRS, сага с компенсациями, идем�
 двухуровневое кеширование, отказоустойчивость на Resilience4j и для тестирования всего этого.
 
 **Стек:** Java 21 · Spring Boot 3.5 · Spring Cloud · Kafka · Debezium ·
-PostgreSQL · Redis · MongoDB · MinIO · Keycloak · Prometheus · Grafana ·
+PostgreSQL · Redis · MinIO · Keycloak · Prometheus · Grafana ·
 React 19 · Docker Compose
 
 ---
@@ -33,7 +33,7 @@ React 19 · Docker Compose
 | `configserver` | 8071 | — | Централизованная конфигурация: профиль `native` для настроек, Vault для секретов |
 | `eurekaserver` | 8070 | — | Реестр сервисов, клиентская балансировка |
 | `gatewayserver` | 8072 | — | Единая точка входа, маршрутизация, CORS, валидация JWT |
-| `product-service` | 8082 | PostgreSQL, Redis, MongoDB, MinIO | Каталог, категории, атрибуты, отзывы, вложения, статистика продавца |
+| `product-service` | 8082 | PostgreSQL, Redis, MinIO | Каталог, категории, атрибуты, отзывы, вложения, статистика продавца |
 | `cart-service` | 8085 | Redis | Корзина с TTL 24 часа, денормализованные позиции |
 | `order-service` | 8081 | PostgreSQL | Заказы, отмена по таймауту |
 | `warehouse-service` | 8086 | PostgreSQL | Остатки, резервы, журнал складских движений |
