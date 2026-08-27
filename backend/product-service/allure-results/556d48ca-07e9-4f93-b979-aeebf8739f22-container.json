@@ -1,0 +1,1 @@
+{"uuid":"556d48ca-07e9-4f93-b979-aeebf8739f22","name":"addProduct with zero stock should not call warehouse","children":["84aa5e08-2fbd-48ea-ba3e-342bb8a54520"],"befores":[],"afters":[],"start":1787788270551,"stop":1787788270561}

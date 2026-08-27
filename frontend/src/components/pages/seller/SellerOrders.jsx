@@ -71,8 +71,8 @@ export default function SellerOrders() {
                 try {
                     const list = await getProductAttachments(pid);
                     const first = Array.isArray(list) && list.length ? list[0] : null;
-                    const key = first ? (first.objectKey || first.key) : null;
-                    const url = key ? `${PRODUCTS_API}/products/attachments/download?key=${encodeURIComponent(key)}` : null;
+                    const attId = first ? (first.gridFsId || first.id || first) : null;
+                    const url = attId ? `${PRODUCTS_API}/products/${attId}/attachments-fs` : null;
                     return [pid, url];
                 } catch {
                     return [pid, null];
@@ -86,7 +86,7 @@ export default function SellerOrders() {
             });
         })();
         return () => { cancelled = true; };
-    }, [rows]);
+    }, [rows, imgByProduct]);
 
     const filtered = useMemo(() => {
         let arr = Array.isArray(rows) ? [...rows] : [];
@@ -233,6 +233,17 @@ export default function SellerOrders() {
 
                                     <div className="col-span-6 sm:col-span-2 text-sm">
                                         Сумма: <span className="font-semibold">{formatPrice(r.totalItemPrice)}</span>
+                                    </div>
+
+                                    <div className="col-span-12 sm:col-span-4 text-xs">
+                                        <div className="text-gray-700 font-medium">Покупатель</div>
+                                        <div className="text-gray-600">{r.customerName || '—'}</div>
+                                        <div className="text-gray-600">
+                                            {r.customerPhone ? <a className="hover:underline" href={`tel:${r.customerPhone}`}>{r.customerPhone}</a> : '—'}
+                                        </div>
+                                        <div className="text-gray-600">
+                                            {r.customerEmail ? <a className="hover:underline" href={`mailto:${r.customerEmail}`}>{r.customerEmail}</a> : '—'}
+                                        </div>
                                     </div>
 
                                     {r.deliveryAddress && (
